@@ -441,6 +441,34 @@ body.ask-ai-is-resizing {
 }
 
 @media (max-width: 1100px) {
+  .ask-ai-workspace {
+    grid-template-columns: 180px 6px minmax(0, 1fr) 6px 300px;
+  }
+
+  .ask-ai-message-panel .chat-archive-header {
+    padding-right: 8px;
+    padding-left: 8px;
+    gap: 4px;
+  }
+
+  .ask-ai-message-panel .chat-title-block {
+    display: none;
+  }
+
+  .ask-ai-message-panel .chat-header-actions {
+    width: 100%;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  .ask-ai-message-panel .is-searching .chat-header-actions > :not(.chat-content-search) {
+    display: none;
+  }
+
+  .ask-ai-message-panel .chat-content-search {
+    min-width: 0;
+  }
+
   .ask-ai-group-panel > header,
   .ask-ai-chat-panel > header {
     padding-right: 10px;

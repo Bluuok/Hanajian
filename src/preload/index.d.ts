@@ -1,4 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
+import type { TopicCenterState, TopicSubscription } from '../shared/topic-digest'
 import { Contact, Message } from '../shared/types'
 import {
   GroupReportExportRequest,
@@ -603,6 +604,11 @@ declare global {
       sendPersonalWechatMessage: (
         request: PersonalWechatSendRequest
       ) => Promise<PersonalWechatSendResult>
+      getTopicCenter: () => Promise<TopicCenterState>
+      saveTopicSubscription: (
+        input: Omit<TopicSubscription, 'id' | 'createdAt'> & { id?: string }
+      ) => Promise<TopicCenterState>
+      runTopicSubscription: (id: string) => Promise<TopicCenterState>
       getAgentHubStatus: () => Promise<AgentHubStatus>
       getAgentHubLogs: () => Promise<AgentHubLogEntry[]>
       clearAgentHubLogs: () => Promise<void>

@@ -142,7 +142,7 @@ test('ASK-AI-01 selected group can be viewed and queried in one workspace', asyn
     await groupList.getByText('产品测试群', { exact: true }).click()
     await expect(fixture.page.getByText('这是一条脱敏测试消息', { exact: true })).toBeVisible()
     await fixture.page.getByRole('textbox', { name: '向 AI 提问' }).fill('总结最近100条')
-    await fixture.page.getByRole('button', { name: '发送' }).click()
+    await fixture.page.getByRole('button', { name: '发送', exact: true }).click()
     await expect(
       fixture.page.getByText('测试 AI 已读取“产品测试群”：总结最近100条', { exact: true })
     ).toBeVisible()
@@ -162,7 +162,7 @@ test('CHAT-01 archive More menu is keyboard-safe and keeps the page usable', asy
     const groupList = fixture.page.locator('.ask-ai-group-list')
     await expect(groupList.getByText('产品测试群', { exact: true })).toBeVisible()
     await conversationSearch.fill('')
-    await fixture.page.getByRole('button', { name: '刷新会话列表' }).click()
+    await fixture.page.getByRole('button', { name: '刷新群聊列表' }).click()
     await groupList.getByText('产品测试群', { exact: true }).click()
     const moreButton = fixture.page.getByRole('button', { name: '更多' })
     await moreButton.click()
@@ -173,7 +173,7 @@ test('CHAT-01 archive More menu is keyboard-safe and keeps the page usable', asy
 
     await moreButton.click()
     await fixture.page.getByRole('menuitem', { name: '刷新数据' }).click()
-    await expect(fixture.page.getByRole('heading', { name: '产品测试群' })).toBeVisible()
+    await expect(groupList.getByText('产品测试群', { exact: true })).toBeVisible()
 
     await fixture.page.getByRole('button', { name: '搜索当前聊天' }).click()
     const searchInput = fixture.page.getByRole('textbox', { name: '搜索当前聊天内容' })
@@ -330,6 +330,9 @@ test('SETTINGS-02 basic settings controls fit a narrow viewport and keep their s
     await expect(fixture.page.getByRole('button', { name: '存储与导出' })).toHaveCount(0)
     const autoLoginSwitch = fixture.page.getByRole('switch', { name: '启动时自动连接数据库' })
     await expect(autoLoginSwitch).toBeVisible()
+    await expect(autoLoginSwitch).toBeChecked()
+    await autoLoginSwitch.click()
+    await expect(autoLoginSwitch).not.toBeChecked()
     await autoLoginSwitch.click()
     await expect(autoLoginSwitch).toBeChecked()
 
@@ -386,7 +389,7 @@ test('UPDATE-01 simulated startup update navigates to live progress and never ex
     await expect(fixture.page.getByText('v2.0.0 已准备完成')).toBeVisible({ timeout: 5_000 })
     await fixture.page.getByRole('button', { name: '立即重启更新' }).click()
     await expect(
-      fixture.page.getByText('开发模拟模式：更新安装动作已模拟，未实际退出应用。')
+      fixture.page.getByText('开发模拟模式：更新安装动作已模拟，未实际退出应用。', { exact: true })
     ).toBeVisible()
     await expect(fixture.page.getByRole('heading', { name: '关于' })).toBeVisible()
     expect(pageErrors).toEqual([])
@@ -705,24 +708,35 @@ test('EXPORT-02 large contact list stays bounded and searchable', async () => {
       ).toBe(true)
     }
 
-    const previewGeometryIsStable = await fixture.page
-      .locator('.export-workspace > aside:last-child')
-      .evaluate((previewPanel) => {
+    const previewPanel = fixture.page.locator('.export-workspace > aside:last-child')
+    if (await previewPanel.isVisible()) {
+      const geometry = await previewPanel.evaluate((previewPanel) => {
         const scrollRegion = previewPanel.children.item(1)
         const statistics = previewPanel.children.item(2)
         if (!(scrollRegion instanceof HTMLElement) || !(statistics instanceof HTMLElement)) {
-          return false
+          throw new Error('Preview structure missing')
         }
         const panelRect = previewPanel.getBoundingClientRect()
         const scrollRect = scrollRegion.getBoundingClientRect()
         const statisticsRect = statistics.getBoundingClientRect()
-        return (
-          scrollRect.bottom <= statisticsRect.top &&
-          statisticsRect.bottom <= panelRect.bottom &&
-          statistics.scrollHeight <= statistics.clientHeight
-        )
+        return {
+          scrollBottom: scrollRect.bottom,
+          statisticsTop: statisticsRect.top,
+          statisticsBottom: statisticsRect.bottom,
+          panelBottom: panelRect.bottom,
+          scrollHeight: statistics.scrollHeight,
+          clientHeight: statistics.clientHeight
+        }
       })
-    expect(previewGeometryIsStable).toBe(true)
+      // Native display scaling introduces subpixel DOMRect rounding.
+      expect(geometry.scrollBottom).toBeLessThanOrEqual(geometry.statisticsTop + 0.5)
+      expect(geometry.statisticsBottom).toBeLessThanOrEqual(geometry.panelBottom + 0.5)
+      expect(geometry.scrollHeight).toBeLessThanOrEqual(geometry.clientHeight)
+    } else {
+      // Windows display scaling can clamp the actual CSS viewport below the
+      // preview panel's intentional 1100px responsive breakpoint.
+      expect(await fixture.page.evaluate(() => window.innerWidth)).toBeLessThanOrEqual(1100)
+    }
 
     await fixture.page.getByRole('textbox', { name: '搜索聊天' }).fill('性能样本 1499')
     const target = contactList.getByRole('button', { name: /性能样本 1499/ })
@@ -758,8 +772,11 @@ test('LAYOUT-01 core workspaces fit a narrow desktop viewport without page error
 test('ARCH-01 ARCH-02 folded chats and supported message types are represented explicitly', async () => {
   const fixture = await launchTestApp()
   try {
-    await expect(fixture.page.getByText('产品测试群', { exact: true })).toBeVisible()
-    await fixture.page.getByText('产品测试群', { exact: true }).click()
+    const groupButton = fixture.page
+      .locator('.ask-ai-group-list')
+      .getByText('产品测试群', { exact: true })
+    await expect(groupButton).toBeVisible()
+    await groupButton.click()
     await expect(fixture.page.getByText('这是一条脱敏测试消息', { exact: true })).toBeVisible()
     await expect(fixture.page.getByText('暂不支持此消息', { exact: true })).toBeVisible()
     await expect(fixture.page.getByAltText('图片')).toBeVisible()
@@ -843,7 +860,7 @@ test('MEDIA-02 MEDIA-04 return accurate unsupported and HTTP 403 reasons', async
 test('REPORT-01 REPORT-02 generates a fixed report with non-empty local assets', async () => {
   const fixture = await launchTestApp()
   try {
-    await fixture.page.getByRole('button', { name: '日报' }).click()
+    await fixture.page.getByRole('button', { name: '日报', exact: true }).click()
     await fixture.page.getByRole('button', { name: '开始生成日报' }).click()
     await expect(fixture.page.getByRole('heading', { name: '生成群聊日报' })).toBeVisible()
     const textModel = fixture.page.getByRole('combobox', { name: '文字总结模型' })
@@ -911,7 +928,7 @@ test('REPORT-01 REPORT-02 generates a fixed report with non-empty local assets',
 test('REPORT-03 report failure is retryable and leaves other pages usable', async () => {
   const fixture = await launchTestApp({ aiFailure: '401' })
   try {
-    await fixture.page.getByRole('button', { name: '日报' }).click()
+    await fixture.page.getByRole('button', { name: '日报', exact: true }).click()
     await fixture.page.getByRole('button', { name: '开始生成日报' }).click()
     await fixture.page.locator('.report-source-item').filter({ hasText: '产品测试群' }).click()
     await fixture.page.getByRole('radio', { name: '近 7 天' }).click()

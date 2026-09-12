@@ -734,7 +734,37 @@ handle('agent-hub:savePromptSettings', (customInstructions) => ({
 handle('agent-hub:askLocal', (request) => ({
   success: true,
   answer: `测试 AI 已读取“${request.groupName}”：${request.question}`,
-  toolCallCount: 1
+  toolCallCount: 1,
+  bundle: request.topicQuery
+    ? {
+        id: 'fixture-topic',
+        query: request.topicQuery,
+        groupName: request.groupName,
+        createdAt: fixtureNowMs,
+        scannedCount: 12,
+        complete: true,
+        warnings: ['合成测试数据，未读取真实微信'],
+        review: 'verified',
+        evidence: [
+          {
+            id: 'E1',
+            messageId: 'fixture-1',
+            sender: '测试成员',
+            timestamp: request.topicQuery.startTime,
+            text: 'craft 项目原定周五上线，因支付问题改为周六。',
+            type: '文本',
+            reason: '关键词',
+            selected: true
+          }
+        ],
+        claims: [{ kind: '决定', text: '上线推迟到周六。', evidenceIds: ['E1'] }]
+      }
+    : undefined
+}))
+handle('topic:center', () => ({
+  subscriptions: [],
+  runs: [],
+  nativeForward: { supported: false, reason: '当前连接器不支持原生合并转发，投递已阻塞。' }
 }))
 handle('agent-hub:startLogin', () => ({ status: agentHubStatus() }))
 handle('agent-hub:cancelLogin', () => ({ status: agentHubStatus() }))

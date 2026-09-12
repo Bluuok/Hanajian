@@ -51,6 +51,10 @@ export const AGENT_HUB_READ_TOOLS: AIToolDefinition[] = [
             type: 'string',
             description: '可选，分页游标，只读取该时间之前的消息'
           },
+          before_cursor: {
+            type: 'string',
+            description: '可选，优先使用上次返回的 next_cursor 继续分页，可完整读取同一秒内的消息'
+          },
           limit: {
             type: 'integer',
             minimum: 1,
@@ -107,6 +111,10 @@ export const AGENT_HUB_READ_TOOLS: AIToolDefinition[] = [
             type: 'string',
             description: '可选，分页游标，只扫描该时间之前的消息'
           },
+          before_cursor: {
+            type: 'string',
+            description: '可选，优先使用上次返回的 next_cursor 继续分页，可完整读取同一秒内的消息'
+          },
           limit: {
             type: 'integer',
             minimum: 1,
@@ -159,11 +167,11 @@ export async function executeAgentHubReadTool(
       case 'find_groups':
         return findGroups(args, adapter)
       case 'read_group_messages':
-        return readGroupMessages(args, adapter)
+        return await readGroupMessages(args, adapter)
       case 'find_group_members':
-        return findGroupMembers(args, adapter)
+        return await findGroupMembers(args, adapter)
       case 'read_group_member_messages':
-        return readGroupMemberMessages(args, adapter)
+        return await readGroupMemberMessages(args, adapter)
       default:
         return failure(`不允许调用工具“${call.function.name}”`)
     }
@@ -209,18 +217,20 @@ async function readGroupMessages(
   const group = requireGroup(args, adapter)
   const range = parseRange(args)
   if ('error' in range) return failure(range.error)
+  const cursor = parseCursor(args['before_cursor'])
+  if (cursor === null) return failure('分页游标无效，请使用上次返回的 next_cursor')
   const limit = boundedInteger(args['limit'], 100, 1, MAX_MESSAGES_PER_CALL)
-  const messages = sortMessages(
-    await adapter.listMessages(group.md5, range.startTime, range.endTime, { limit })
-  ).slice(-limit)
+  const page = await readMessagePage(adapter, group.md5, range, limit, cursor)
+  const messages = page.messages
   return {
     ok: true,
     group: groupSummary(group),
     query: rangeSummary(range),
     count: messages.length,
     messages: messages.map(toAgentMessage),
-    has_more: messages.length === limit,
-    next_before_time: messages[0]?.createTime ? formatLocalTime(messages[0].createTime) : undefined
+    has_more: page.hasMore,
+    next_before_time: messages[0]?.createTime ? formatLocalTime(messages[0].createTime) : undefined,
+    next_cursor: page.hasMore && messages[0] ? formatCursor(messages[0]) : undefined
   }
 }
 
@@ -264,20 +274,28 @@ async function readGroupMemberMessages(
   }
   const range = parseRange(args)
   if ('error' in range) return failure(range.error)
+  const cursor = parseCursor(args['before_cursor'])
+  if (cursor === null) return failure('分页游标无效，请使用上次返回的 next_cursor')
   const limit = boundedInteger(args['limit'], 100, 1, MAX_MESSAGES_PER_CALL)
-  const sourceMessages = sortMessages(
-    await adapter.listMessages(group.md5, range.startTime, range.endTime, {
-      limit: MAX_MEMBER_SCAN_MESSAGES
-    })
+  const sourcePage = await readMessagePage(
+    adapter,
+    group.md5,
+    range,
+    MAX_MEMBER_SCAN_MESSAGES,
+    cursor
   )
+  const sourceMessages = sourcePage.messages
   const aliases = new Set(memberNames(memberMatch.member).map(normalizeName).filter(Boolean))
-  const messages = sourceMessages
-    .filter(
-      (message) =>
-        String(message.senderId || '').trim() === memberMatch.member?.wxid ||
-        aliases.has(normalizeName(String(message.name || '')))
-    )
-    .slice(-limit)
+  const matchingMessages = sourceMessages.filter((message) => {
+    const senderId = String(message.senderId || '').trim()
+    return senderId
+      ? senderId === memberMatch.member?.wxid
+      : aliases.has(normalizeName(String(message.name || '')))
+  })
+  const messages = matchingMessages.slice(-limit)
+  const matchesWereTruncated = matchingMessages.length > limit
+  const hasMore = matchesWereTruncated || sourcePage.hasMore
+  const continuationMessage = matchesWereTruncated ? messages[0] : sourceMessages[0]
   return {
     ok: true,
     group: groupSummary(group),
@@ -286,10 +304,97 @@ async function readGroupMemberMessages(
     scanned_message_count: sourceMessages.length,
     count: messages.length,
     messages: messages.map(toAgentMessage),
-    has_more: sourceMessages.length === MAX_MEMBER_SCAN_MESSAGES,
-    next_before_time: sourceMessages[0]?.createTime
-      ? formatLocalTime(sourceMessages[0].createTime)
-      : undefined
+    has_more: hasMore,
+    next_before_time:
+      hasMore && continuationMessage?.createTime
+        ? formatLocalTime(continuationMessage.createTime)
+        : undefined,
+    next_cursor: hasMore && continuationMessage ? formatCursor(continuationMessage) : undefined
+  }
+}
+
+type MessageCursor = { createTime: number; id: string }
+
+async function readMessagePage(
+  adapter: AgentHubReadAdapter,
+  groupId: string,
+  range: { startTime?: number; endTime?: number },
+  limit: number,
+  cursor?: MessageCursor
+): Promise<{ messages: FormattedMessage[]; hasMore: boolean }> {
+  const requested = limit + 1
+  if (
+    cursor &&
+    ((range.startTime !== undefined && cursor.createTime < range.startTime) ||
+      (range.endTime !== undefined && cursor.createTime > range.endTime))
+  )
+    throw new Error('分页游标不在查询时间范围内，请重新查询')
+  const readCompleteBoundary = async (endTime?: number): Promise<FormattedMessage[]> => {
+    const page = await adapter.listMessages(groupId, range.startTime, endTime, { limit: requested })
+    if (page.length < requested) return page
+    // The database orders by timestamp only. Complete its boundary second before
+    // imposing the stable ID tie-breaker used by all subsequent pages.
+    const boundary = Math.min(...page.map((m) => Number(m.createTime || 0)))
+    const sameSecond = await adapter.listMessages(groupId, boundary, boundary)
+    return [...page, ...sameSecond]
+  }
+  let candidates: FormattedMessage[]
+  if (!cursor) {
+    candidates = await readCompleteBoundary(range.endTime)
+  } else {
+    const sameSecond =
+      !range.startTime || range.startTime <= cursor.createTime
+        ? await adapter.listMessages(groupId, cursor.createTime, cursor.createTime)
+        : []
+    const olderEnd = Math.min(range.endTime ?? Number.MAX_SAFE_INTEGER, cursor.createTime - 1)
+    const older =
+      !range.startTime || range.startTime <= olderEnd ? await readCompleteBoundary(olderEnd) : []
+    candidates = [...older, ...sameSecond].filter(
+      (message) => compareMessageToCursor(message, cursor) < 0
+    )
+  }
+  const ordered = sortMessages(
+    dedupeMessages(candidates).filter(
+      (m) =>
+        (range.startTime === undefined || Number(m.createTime) >= range.startTime) &&
+        (range.endTime === undefined || Number(m.createTime) <= range.endTime)
+    )
+  ).slice(-requested)
+  return {
+    messages: ordered.slice(-Math.min(limit, ordered.length)),
+    hasMore: ordered.length > limit
+  }
+}
+
+function dedupeMessages(messages: FormattedMessage[]): FormattedMessage[] {
+  const unique = new Map<string, FormattedMessage>()
+  for (const message of messages) unique.set(messageIdentity(message), message)
+  return Array.from(unique.values())
+}
+
+function messageIdentity(message: FormattedMessage): string {
+  return `${Number(message.createTime || 0)}:${String(message.id || '')}`
+}
+
+function compareMessageToCursor(message: FormattedMessage, cursor: MessageCursor): number {
+  const timeDifference = Number(message.createTime || 0) - cursor.createTime
+  return timeDifference || String(message.id || '').localeCompare(cursor.id)
+}
+
+function formatCursor(message: FormattedMessage): string {
+  return `v1:${Number(message.createTime || 0)}:${encodeURIComponent(String(message.id || ''))}`
+}
+
+function parseCursor(value: unknown): MessageCursor | undefined | null {
+  if (value === undefined || value === null || value === '') return undefined
+  const match = /^v1:(\d+):(.*)$/.exec(String(value).trim())
+  if (!match) return null
+  const createTime = Number(match[1])
+  try {
+    const id = decodeURIComponent(match[2])
+    return Number.isSafeInteger(createTime) && createTime > 0 && id ? { createTime, id } : null
+  } catch {
+    return null
   }
 }
 
@@ -308,7 +413,7 @@ function parseRange(
 ): { startTime?: number; endTime?: number; beforeTime?: number } | { error: string } {
   const startTime = parseTime(args['start_time'])
   const requestedEndTime = parseTime(args['end_time'])
-  const beforeTime = parseTime(args['before_time'])
+  const beforeTime = args['before_cursor'] ? undefined : parseTime(args['before_time'])
   if (startTime === null || requestedEndTime === null || beforeTime === null) {
     return { error: '时间格式无效，请使用 YYYY-MM-DD HH:mm:ss' }
   }
@@ -455,7 +560,9 @@ function matchScore(values: string[], query: string): number {
 
 function sortMessages(messages: FormattedMessage[]): FormattedMessage[] {
   return [...messages].sort(
-    (left, right) => Number(left.createTime || 0) - Number(right.createTime || 0)
+    (left, right) =>
+      Number(left.createTime || 0) - Number(right.createTime || 0) ||
+      String(left.id || '').localeCompare(String(right.id || ''))
   )
 }
 

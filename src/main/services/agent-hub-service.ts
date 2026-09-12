@@ -21,9 +21,11 @@ import type { AIToolChatMessage } from '../../shared/ai-provider'
 import { loadSettings, updateSettings, type AppSettings } from './settings-store'
 import { AIProviderService } from './ai-provider-service'
 import { isPackagedRuntime } from '../runtime-mode'
-import { isReady } from './chat-service'
+import { getChatDb, isReady } from './chat-service'
 import { AGENT_HUB_READ_TOOLS, executeAgentHubReadTool } from './agent-hub-read-tools'
 import { buildAgentHubSystemPrompt, normalizeAgentHubCustomInstructions } from './agent-hub-prompt'
+import { buildTopicBundle, TOPIC_QUERY_TOOL } from './topic-digest-service'
+import { formatTopicBundle } from '../../shared/topic-digest'
 
 const execFileAsync = promisify(execFile)
 const HEALTH_INTERVAL_MS = 5_000
@@ -83,6 +85,7 @@ class AgentHubService {
   private readonly processedMessages = new Map<string, number>()
   private readonly inboundToken =
     process.env['AGENT_HUB_INBOUND_TOKEN'] || randomBytes(32).toString('hex')
+  private readonly connectorApiToken = randomBytes(32).toString('hex')
   private status: AgentHubStatus = {
     hub: 'offline',
     connector: 'checking',
@@ -157,6 +160,11 @@ class AgentHubService {
       const groupName = String(input?.groupName || '').trim()
       if (!question) throw new Error('请输入想问的问题')
       if (!groupId || !groupName) throw new Error('请先选择一个群聊')
+      if (input.topicQuery) {
+        if (input.topicQuery.groupId !== groupId) throw new Error('话题条件与当前群聊不一致')
+        const bundle = await buildTopicBundle(input.topicQuery)
+        return { success: true, answer: formatTopicBundle(bundle), bundle }
+      }
 
       const now = new Date()
       const localTime = now.toLocaleString('zh-CN', { hour12: false })
@@ -222,7 +230,10 @@ class AgentHubService {
     try {
       const response = await fetch(`http://${CONNECTOR_ADDR}/api/send`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.connectorApiToken}`
+        },
         body: JSON.stringify({
           account_id: this.status.accountId,
           to,
@@ -452,8 +463,19 @@ class AgentHubService {
     messages: AIToolChatMessage[]
   ): Promise<{ answer: string; toolCallCount: number }> {
     let toolCallCount = 0
+    let hasEvidence = false
+    let clarification = ''
+    const connection = getChatDb()
+    const checkConnection = (): void => {
+      if (!connection || getChatDb() !== connection) throw new Error('数据库连接已切换，请重新提问')
+    }
     for (let round = 0; round < MAX_AGENT_ROUNDS; round++) {
-      const result = await agentAIProvider.chatWithTools(messages, AGENT_HUB_READ_TOOLS)
+      checkConnection()
+      const result = await agentAIProvider.chatWithTools(messages, [
+        ...AGENT_HUB_READ_TOOLS,
+        TOPIC_QUERY_TOOL
+      ])
+      checkConnection()
       if (!result.success) throw new Error(result.error || 'AI 调用失败')
       const toolCalls = result.toolCalls || []
       messages.push({
@@ -463,6 +485,13 @@ class AgentHubService {
       })
 
       if (!toolCalls.length) {
+        if (!hasEvidence)
+          return {
+            answer:
+              clarification ||
+              '本次尚未读取到可用的聊天原文，不能给出事实性总结。请明确群名、话题和时间范围，或检查本机聊天数据是否已同步。',
+            toolCallCount
+          }
         const answer = String(result.content || '').trim()
         if (!answer) throw new Error('AI 没有返回总结')
         return { answer, toolCallCount }
@@ -474,7 +503,24 @@ class AgentHubService {
           throw new Error('本次读取步骤过多，请缩小群聊、时间或消息数量范围')
         }
         this.addLog('agent-hub', 'info', `AI 调用只读工具：${call.function.name}`)
+        if (call.function.name === TOPIC_QUERY_TOOL.function.name) {
+          const bundle = await buildTopicBundle(JSON.parse(call.function.arguments))
+          checkConnection()
+          return { answer: formatTopicBundle(bundle), toolCallCount }
+        }
         const output = await executeAgentHubReadTool(call)
+        checkConnection()
+        const candidates = Array.isArray(output.groups)
+          ? output.groups
+          : Array.isArray(output.candidates)
+            ? output.candidates
+            : Array.isArray(output.members)
+              ? output.members
+              : []
+        if (candidates.length > 1)
+          clarification = `找到多个候选，请确认名称或 ID 后继续：\n${candidates.map((v) => JSON.stringify(v)).join('\n')}`
+        if (output.ok === true && Array.isArray(output.messages) && output.messages.length > 0)
+          hasEvidence = true
         messages.push({
           role: 'tool',
           content: JSON.stringify(output),
@@ -501,7 +547,10 @@ class AgentHubService {
   ): Promise<void> {
     const response = await fetch(`http://${CONNECTOR_ADDR}/api/send`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.connectorApiToken}`
+      },
       body: JSON.stringify({
         account_id: inbound.account_id,
         to: inbound.from_user_id,
@@ -604,6 +653,7 @@ class AgentHubService {
       {
         env: {
           ...process.env,
+          WECHAT_CONNECTOR_API_TOKEN: this.connectorApiToken,
           WECHAT_CONNECTOR_INBOUND_WEBHOOK_URL: `http://${HUB_ADDR}/v1/connectors/wechat/inbound`,
           WECHAT_CONNECTOR_INBOUND_WEBHOOK_TOKEN: this.inboundToken,
           WECHAT_CONNECTOR_INBOUND_WEBHOOK_ONLY: 'true'

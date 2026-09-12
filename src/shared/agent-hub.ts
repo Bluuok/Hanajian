@@ -1,3 +1,4 @@
+import type { TopicQuery, TopicBundle } from './topic-digest'
 export type AgentHubRuntimeStatus = 'starting' | 'online' | 'offline' | 'error'
 export type WechatConnectorStatus =
   | 'checking'
@@ -49,6 +50,7 @@ export interface AgentHubLocalAskRequest {
   groupId: string
   groupName: string
   history?: AgentHubLocalChatMessage[]
+  topicQuery?: TopicQuery
 }
 
 export interface AgentHubLocalAskResult {
@@ -56,6 +58,7 @@ export interface AgentHubLocalAskResult {
   answer?: string
   toolCallCount?: number
   error?: string
+  bundle?: TopicBundle
 }
 
 export type AgentHubLogSource = 'agent-hub' | 'wechat-connector' | 'system'

@@ -1,5 +1,7 @@
 # TraceDigest
 
+新增：[话题整理、原文证据和每日订阅使用说明](docs/topic-digest.md)。支持自定义话题与精确时间；当前原生微信合并转发能力未接通，定时任务生成后会明确显示投递阻塞。
+
 <p align="center">
   <img src="./build/icon.png" width="120" alt="TraceDigest Logo" />
 </p>

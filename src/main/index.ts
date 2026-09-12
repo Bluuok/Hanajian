@@ -111,6 +111,8 @@ import {
 } from './services/bootstrap-cache'
 import { installSafeConsole } from './safe-log'
 import { agentHubService } from './services/agent-hub-service'
+import { TopicCenterService } from './services/topic-center-service'
+import { buildTopicBundle } from './services/topic-digest-service'
 import { personalWechatSendService } from './services/personal-wechat-send-service'
 import { PersonalWechatRuntimeManager } from './services/personal-wechat-runtime-manager'
 import type { PersonalWechatSendRequest } from '../shared/personal-wechat'
@@ -1769,6 +1771,25 @@ app.whenReady().then(async () => {
       return { success: false, error: error instanceof Error ? error.message : String(error) }
     }
   })
+  const topicCenter = new TopicCenterService(
+    join(app.getPath('userData'), 'topic-center'),
+    () => (chat.isReady() ? chat.getCurrentAccountRoot() : ''),
+    buildTopicBundle
+  )
+  ipcMain.handle('topic:center', () => topicCenter.getState())
+  ipcMain.handle('topic:saveSubscription', (_, input) => {
+    if (input.recipient !== agentHubService.getStatus().wechatUserId)
+      throw new Error('收件人必须是当前 Clawbot 已连接的本人账号')
+    if (!chat.listContacts().some((c) => c.type === 'group' && c.md5 === input.query?.groupId))
+      throw new Error('请先选择有效群聊')
+    return topicCenter.saveSubscription(input)
+  })
+  ipcMain.handle('topic:runSubscription', (_, id) => topicCenter.tick(Date.now(), String(id)))
+  const topicTimer = setInterval(() => {
+    void topicCenter.tick().catch((error) => console.error('[TopicCenter]', error))
+  }, 60000)
+  topicTimer.unref()
+  app.once('before-quit', () => clearInterval(topicTimer))
   ipcMain.handle('agent-hub:getStatus', () => agentHubService.getStatus())
   ipcMain.handle('agent-hub:getLogs', () => agentHubService.getLogs())
   ipcMain.handle('agent-hub:clearLogs', () => agentHubService.clearLogs())

@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/Wxw-Gu/WechatExplorer/services/wechat-connector/ilink"
 	"github.com/Wxw-Gu/WechatExplorer/services/wechat-connector/messaging"
@@ -15,6 +17,7 @@ import (
 type Server struct {
 	clients []*ilink.Client
 	addr    string
+	token   string
 }
 
 // NewServer creates an API server.
@@ -22,7 +25,7 @@ func NewServer(clients []*ilink.Client, addr string) *Server {
 	if addr == "" {
 		addr = "127.0.0.1:18011"
 	}
-	return &Server{clients: clients, addr: addr}
+	return &Server{clients: clients, addr: addr, token: os.Getenv("WECHAT_CONNECTOR_API_TOKEN")}
 }
 
 // SendRequest is the JSON body for POST /api/send.
@@ -37,6 +40,10 @@ type SendRequest struct {
 func (s *Server) Run(ctx context.Context) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/send", s.handleSend)
+	mux.HandleFunc("/api/capabilities", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"native_forward": false, "reason": "native merged records are not implemented by this connector"})
+	})
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
@@ -61,6 +68,11 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "POST only", http.StatusMethodNotAllowed)
 		return
 	}
+	if s.token == "" || subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), []byte("Bearer "+s.token)) != 1 {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 	var req SendRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -96,16 +108,7 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "send text failed: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		log.Printf("[api] sent text to %s: %q", req.To, req.Text)
-
-		// Extract and send any markdown images embedded in text
-		for _, imgURL := range messaging.ExtractImageURLs(req.Text) {
-			if err := messaging.SendMediaFromURL(ctx, client, req.To, imgURL, ""); err != nil {
-				log.Printf("[api] send extracted image failed: %v", err)
-			} else {
-				log.Printf("[api] sent extracted image to %s: %s", req.To, imgURL)
-			}
-		}
+		log.Printf("[api] text submitted")
 	}
 
 	// Send media if provided

@@ -3,6 +3,7 @@ import type { AgentHubLocalChatMessage } from '../../../../shared/agent-hub'
 import type { Contact, Message } from '../../../../shared/types'
 import ChatWindow from '../../components/ChatWindow'
 import { Button, Textarea } from '../../components/ui'
+import { TopicPanel } from './TopicPanel'
 
 interface AskAIWorkspaceProps {
   contacts: Contact[]
@@ -157,6 +158,7 @@ export function AskAIWorkspace({
   const [rightWidth, setRightWidth] = React.useState(() =>
     loadPanelWidth(RIGHT_WIDTH_KEY, DEFAULT_RIGHT_WIDTH)
   )
+  const [topicPanelOpen, setTopicPanelOpen] = React.useState(false)
   const answerEndRef = React.useRef<HTMLDivElement>(null)
   const workspaceRef = React.useRef<HTMLDivElement>(null)
   const historiesRef = React.useRef(histories)
@@ -201,6 +203,10 @@ export function AskAIWorkspace({
   const chat = histories[selectedGroupId] || []
   const isBusy = Boolean(busyGroupId)
   const isAsking = Boolean(selectedGroupId && busyGroupId === selectedGroupId)
+
+  React.useEffect(() => {
+    setTopicPanelOpen(false)
+  }, [selectedGroupId])
 
   React.useEffect(() => {
     mountedRef.current = true
@@ -454,6 +460,14 @@ export function AskAIWorkspace({
       />
 
       <aside className="ask-ai-chat-panel" aria-label="AI 对话">
+        {topicPanelOpen && selectedGroup ? (
+          <TopicPanel
+            key={selectedGroupId}
+            groupId={selectedGroupId}
+            groupName={displayName(selectedGroup)}
+            onClose={() => setTopicPanelOpen(false)}
+          />
+        ) : null}
         <header>
           <div className="ask-ai-bot-mark" aria-hidden>
             AI
@@ -476,6 +490,15 @@ export function AskAIWorkspace({
               ))}
             </select>
           </label>
+          <button
+            type="button"
+            className="ask-ai-topic-toggle"
+            aria-expanded={topicPanelOpen}
+            disabled={!selectedGroup}
+            onClick={() => setTopicPanelOpen((open) => !open)}
+          >
+            话题
+          </button>
           {chat.length > 0 ? (
             <button
               type="button"
@@ -526,7 +549,12 @@ export function AskAIWorkspace({
             placeholder={selectedGroup ? '例如：总结最近 100 条消息…' : '请先选择一个群聊'}
             onChange={(event) => setQuestion(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
+              if (
+                event.key === 'Enter' &&
+                !event.shiftKey &&
+                !event.nativeEvent.isComposing &&
+                event.nativeEvent.keyCode !== 229
+              ) {
                 event.preventDefault()
                 void ask()
               }

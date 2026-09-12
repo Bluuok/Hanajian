@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { TopicCenterState, TopicSubscription } from '../shared/topic-digest'
 import { electronAPI } from '@electron-toolkit/preload'
 import type {
   GroupReportExportRequest,
@@ -388,6 +389,12 @@ const api = {
   sendPersonalWechatMessage: (
     request: PersonalWechatSendRequest
   ): Promise<PersonalWechatSendResult> => ipcRenderer.invoke('wechat-personal:send', request),
+  getTopicCenter: (): Promise<TopicCenterState> => ipcRenderer.invoke('topic:center'),
+  saveTopicSubscription: (
+    input: Omit<TopicSubscription, 'id' | 'createdAt'> & { id?: string }
+  ): Promise<TopicCenterState> => ipcRenderer.invoke('topic:saveSubscription', input),
+  runTopicSubscription: (id: string): Promise<TopicCenterState> =>
+    ipcRenderer.invoke('topic:runSubscription', id),
   getAgentHubStatus: () => ipcRenderer.invoke('agent-hub:getStatus'),
   getAgentHubLogs: () => ipcRenderer.invoke('agent-hub:getLogs'),
   clearAgentHubLogs: () => ipcRenderer.invoke('agent-hub:clearLogs'),
