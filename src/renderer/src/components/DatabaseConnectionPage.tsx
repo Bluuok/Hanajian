@@ -4,7 +4,7 @@ import { WINDOWS_VC_RUNTIME_DOWNLOAD_URL } from '../../../shared/windows-runtime
 import { Button, IconButton, Input, Tabs, TabsList, TabsTrigger } from './ui'
 
 const GUIDE_URL =
-  'https://github.com/gmll-star/TraceDigest/blob/main/docs/user-guide/getting-started.md'
+  'https://github.com/Bluuok/TraceDigest/blob/main/docs/user-guide/getting-started.md'
 
 export type DatabaseConnectionMode = 'automatic' | 'manual'
 export type DatabaseConnectionStatusKind = 'normal' | 'success' | 'error'

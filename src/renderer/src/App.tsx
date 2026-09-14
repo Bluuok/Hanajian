@@ -68,7 +68,7 @@ interface SelfInfo {
   accountRoot: string
 }
 
-const MAC_KEY_FAQ_URL = 'https://github.com/gmll-star/TraceDigest/blob/main/docs/mac-disable-sip.md'
+const MAC_KEY_FAQ_URL = 'https://github.com/Bluuok/TraceDigest/blob/main/docs/mac-disable-sip.md'
 const FIRST_USE_WELCOME_SEEN_KEY = 'wxe_first_use_welcome_seen'
 const MESSAGE_MONITOR_DEBOUNCE_MS = 8000
 const INITIAL_MESSAGE_COUNT = 20

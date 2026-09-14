@@ -1,5 +1,5 @@
 export const APP_UPDATES_ENABLED = false
-export const APP_UPDATE_RELEASES_URL = 'https://github.com/gmll-star/TraceDigest/releases/latest'
+export const APP_UPDATE_RELEASES_URL = 'https://github.com/Bluuok/TraceDigest/releases/latest'
 
 export type AppUpdateStatus =
   | 'idle'

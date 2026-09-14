@@ -667,7 +667,7 @@ app.whenReady().then(async () => {
   })
 
   // 设置应用程序用户模型 ID
-  electronApp.setAppUserModelId('io.github.gmll-star.tracedigest')
+  electronApp.setAppUserModelId('io.github.bluuok.tracedigest')
 
   if (process.platform === 'darwin') app.dock?.setIcon(appIconPath)
 

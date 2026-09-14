@@ -1,5 +1,5 @@
 provider: github
-owner: gmll-star
+owner: Bluuok
 repo: TraceDigest
 releaseType: release
 updaterCacheDirName: tracedigest-updater

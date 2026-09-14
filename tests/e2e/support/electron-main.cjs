@@ -864,7 +864,7 @@ let appUpdateState = updateSimulation
 let openedUpdateDownloadUrl = ''
 handle('app-update:getState', () => appUpdateState)
 handle('app-update:openDownloadPage', () => {
-  openedUpdateDownloadUrl = 'https://github.com/gmll-star/TraceDigest/releases/latest'
+  openedUpdateDownloadUrl = 'https://github.com/Bluuok/TraceDigest/releases/latest'
   return { success: true }
 })
 handle('app-update:getOpenedDownloadUrl', () => openedUpdateDownloadUrl)

@@ -1,5 +1,7 @@
 # TraceDigest
 
+当前维护仓库：[Bluuok/TraceDigest](https://github.com/Bluuok/TraceDigest)，主分支为 `main`。项目由 Bluuok 独立维护，代码、问题反馈、下载和后续发布均以此仓库为准，不同步原仓库更新。
+
 新增：[话题整理、原文证据和每日订阅使用说明](docs/topic-digest.md)。支持自定义话题与精确时间；当前原生微信合并转发能力未接通，定时任务生成后会明确显示投递阻塞。
 
 <p align="center">
@@ -14,13 +16,13 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/stars/gmll-star/TraceDigest?style=for-the-badge" alt="GitHub stars" />
-  <img src="https://img.shields.io/github/downloads/gmll-star/TraceDigest/total?style=for-the-badge" alt="GitHub downloads" />
-  <img src="https://img.shields.io/github/v/release/gmll-star/TraceDigest?style=for-the-badge" alt="Latest release" />
+  <img src="https://img.shields.io/github/stars/Bluuok/TraceDigest?style=for-the-badge" alt="GitHub stars" />
+  <img src="https://img.shields.io/github/downloads/Bluuok/TraceDigest/total?style=for-the-badge" alt="GitHub downloads" />
+  <img src="https://img.shields.io/github/v/release/Bluuok/TraceDigest?style=for-the-badge" alt="Latest release" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/gmll-star/TraceDigest/releases"><b>下载 TraceDigest</b></a>
+  <a href="https://github.com/Bluuok/TraceDigest/releases"><b>下载 TraceDigest</b></a>
   ·
   <a href="./docs/user-guide/getting-started.md"><b>第一次使用</b></a>
   ·
@@ -319,7 +321,7 @@ flowchart LR
 
 ## 快速开始
 
-1. 从 [GitHub Releases](https://github.com/gmll-star/TraceDigest/releases) 下载安装包。
+1. 从 [GitHub Releases](https://github.com/Bluuok/TraceDigest/releases) 下载安装包。
 2. 启动 TraceDigest，按照“第一次使用”页面选择微信数据目录。
 3. 第一次使用请先点击“开始连接”，按页面提示准备连接组件并获取数据库密钥；只有已经有密钥的高级用户才需要“手动连接”。
 4. 连接成功后打开“档案”，确认联系人和聊天消息已经出现。

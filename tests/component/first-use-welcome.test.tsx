@@ -60,7 +60,7 @@ describe('FirstUseWelcome', () => {
     expect(onOpenAISettings).toHaveBeenCalledOnce()
     expect(screen.getByRole('link', { name: '查看完整使用教程' })).toHaveAttribute(
       'href',
-      'https://github.com/gmll-star/TraceDigest/blob/main/docs/user-guide/getting-started.md'
+      'https://github.com/Bluuok/TraceDigest/blob/main/docs/user-guide/getting-started.md'
     )
   })
 })

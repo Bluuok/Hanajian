@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/Wxw-Gu/WechatExplorer/services/wechat-connector/ilink"
+	"github.com/Bluuok/TraceDigest/services/wechat-connector/ilink"
 )
 
 func TestInboundWebhookDeliversNormalizedPayload(t *testing.T) {

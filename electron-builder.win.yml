@@ -1,4 +1,4 @@
-appId: io.github.gmll-star.tracedigest
+appId: io.github.bluuok.tracedigest
 productName: TraceDigest
 afterPack: scripts/after-pack.cjs
 directories:
@@ -64,6 +64,6 @@ electronLanguages:
   - en-US
 publish:
   provider: github
-  owner: gmll-star
+  owner: Bluuok
   repo: TraceDigest
   releaseType: release

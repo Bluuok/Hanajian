@@ -18,10 +18,10 @@
     "AI群聊总结",
     "本地AI"
   ],
-  "author": "gmll-star",
+  "author": "Bluuok",
   "repository": {
     "type": "git",
-    "url": "https://github.com/gmll-star/TraceDigest.git"
+    "url": "https://github.com/Bluuok/TraceDigest.git"
   },
   "main": "./out/main/index.js",
   "scripts": {

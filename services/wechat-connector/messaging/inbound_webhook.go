@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Wxw-Gu/WechatExplorer/services/wechat-connector/ilink"
+	"github.com/Bluuok/TraceDigest/services/wechat-connector/ilink"
 )
 
 const (

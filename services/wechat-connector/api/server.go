@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Wxw-Gu/WechatExplorer/services/wechat-connector/ilink"
-	"github.com/Wxw-Gu/WechatExplorer/services/wechat-connector/messaging"
+	"github.com/Bluuok/TraceDigest/services/wechat-connector/ilink"
+	"github.com/Bluuok/TraceDigest/services/wechat-connector/messaging"
 )
 
 // Server provides an HTTP API for sending messages.

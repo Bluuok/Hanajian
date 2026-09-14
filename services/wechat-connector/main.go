@@ -14,9 +14,9 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/Wxw-Gu/WechatExplorer/services/wechat-connector/api"
-	"github.com/Wxw-Gu/WechatExplorer/services/wechat-connector/ilink"
-	"github.com/Wxw-Gu/WechatExplorer/services/wechat-connector/messaging"
+	"github.com/Bluuok/TraceDigest/services/wechat-connector/api"
+	"github.com/Bluuok/TraceDigest/services/wechat-connector/ilink"
+	"github.com/Bluuok/TraceDigest/services/wechat-connector/messaging"
 	"rsc.io/qr"
 )
 

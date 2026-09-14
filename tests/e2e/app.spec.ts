@@ -411,7 +411,7 @@ test('UPDATE-02 unsigned macOS update opens the latest release without downloadi
     const openedUrl = await fixture.page.evaluate(() =>
       window.electron.ipcRenderer.invoke('app-update:getOpenedDownloadUrl')
     )
-    expect(openedUrl).toBe('https://github.com/gmll-star/TraceDigest/releases/latest')
+    expect(openedUrl).toBe('https://github.com/Bluuok/TraceDigest/releases/latest')
     await expect(fixture.page.getByRole('progressbar')).toHaveCount(0)
     expect(pageErrors).toEqual([])
   } finally {
