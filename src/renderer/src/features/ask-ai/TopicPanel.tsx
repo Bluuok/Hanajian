@@ -13,6 +13,8 @@ interface TopicPanelProps {
   groupId: string
   groupName: string
   onClose: () => void
+  variant?: 'panel' | 'workspace'
+  active?: boolean
 }
 
 const splitList = (value: string): string[] => [
@@ -47,7 +49,13 @@ const formatTime = (epochSeconds: number): string =>
 const subscriptionName = (subscription: TopicSubscription): string =>
   `${subscription.query.topic} · ${subscription.query.groupId}`
 
-export function TopicPanel({ groupId, groupName, onClose }: TopicPanelProps): React.ReactElement {
+export function TopicPanel({
+  groupId,
+  groupName,
+  onClose,
+  variant = 'panel',
+  active = true
+}: TopicPanelProps): React.ReactElement {
   const initialRange = React.useMemo(previousDayRange, [])
   const [topic, setTopic] = React.useState('craft')
   const [aliases, setAliases] = React.useState('')
@@ -59,6 +67,8 @@ export function TopicPanel({ groupId, groupName, onClose }: TopicPanelProps): Re
   const [bundle, setBundle] = React.useState<TopicBundle | null>(null)
   const [evidence, setEvidence] = React.useState<TopicEvidence[]>([])
   const [summaryInvalid, setSummaryInvalid] = React.useState(false)
+  const [selectedEvidenceId, setSelectedEvidenceId] = React.useState('')
+  const selectedEvidence = evidence.find((item) => item.id === selectedEvidenceId)
   const [busy, setBusy] = React.useState(false)
   const [error, setError] = React.useState('')
   const [center, setCenter] = React.useState<TopicCenterState | null>(null)
@@ -68,6 +78,7 @@ export function TopicPanel({ groupId, groupName, onClose }: TopicPanelProps): Re
   const evidenceRefs = React.useRef(new Map<string, HTMLElement>())
 
   React.useEffect(() => {
+    setSelectedEvidenceId('')
     setBundle(null)
     setEvidence([])
     setSummaryInvalid(false)
@@ -76,6 +87,7 @@ export function TopicPanel({ groupId, groupName, onClose }: TopicPanelProps): Re
   }, [groupId])
 
   React.useEffect(() => {
+    if (!active) return
     let current = true
     const refresh = (): void => {
       void Promise.all([window.api.getTopicCenter(), window.api.getAgentHubStatus()])
@@ -95,7 +107,7 @@ export function TopicPanel({ groupId, groupName, onClose }: TopicPanelProps): Re
       current = false
       clearInterval(timer)
     }
-  }, [])
+  }, [active])
 
   const startEpoch = Math.floor(new Date(start).getTime() / 1000)
   const endEpoch = Math.floor(new Date(end).getTime() / 1000)
@@ -149,6 +161,7 @@ export function TopicPanel({ groupId, groupName, onClose }: TopicPanelProps): Re
   }
 
   const locateEvidence = (id: string): void => {
+    setSelectedEvidenceId(id)
     evidenceRefs.current.get(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
@@ -232,8 +245,8 @@ export function TopicPanel({ groupId, groupName, onClose }: TopicPanelProps): Re
   }
 
   return (
-    <section className="topic-panel" aria-label="话题整理面板">
-      <header className="topic-panel-heading">
+    <section className={`topic-panel topic-panel--${variant}`} aria-label="话题整理面板">
+      <header className="topic-panel-heading" hidden={variant === 'workspace'}>
         <div>
           <span>本机话题包</span>
           <h3>话题整理</h3>
@@ -254,33 +267,38 @@ export function TopicPanel({ groupId, groupName, onClose }: TopicPanelProps): Re
               onChange={(event) => setTopic(event.target.value)}
             />
           </label>
-          <label>
-            别名
-            <input
-              aria-label="别名"
-              value={aliases}
-              onChange={(event) => setAliases(event.target.value)}
-              placeholder="逗号或换行分隔"
-            />
-          </label>
-          <label>
-            排除
-            <input
-              aria-label="排除"
-              value={excludes}
-              onChange={(event) => setExcludes(event.target.value)}
-              placeholder="逗号或换行分隔"
-            />
-          </label>
-          <label>
-            成员 ID
-            <input
-              aria-label="成员 ID"
-              value={memberIds}
-              onChange={(event) => setMemberIds(event.target.value)}
-              placeholder="逗号或换行分隔"
-            />
-          </label>
+          <details className="topic-advanced">
+            <summary>高级筛选 · 别名、排除与成员</summary>
+            <div>
+              <label>
+                别名
+                <input
+                  aria-label="别名"
+                  value={aliases}
+                  onChange={(event) => setAliases(event.target.value)}
+                  placeholder="逗号或换行分隔"
+                />
+              </label>
+              <label>
+                排除
+                <input
+                  aria-label="排除"
+                  value={excludes}
+                  onChange={(event) => setExcludes(event.target.value)}
+                  placeholder="逗号或换行分隔"
+                />
+              </label>
+              <label>
+                成员 ID
+                <input
+                  aria-label="成员 ID"
+                  value={memberIds}
+                  onChange={(event) => setMemberIds(event.target.value)}
+                  placeholder="逗号或换行分隔"
+                />
+              </label>
+            </div>
+          </details>
           <div className="topic-time-row">
             <label>
               开始时间
@@ -374,52 +392,74 @@ export function TopicPanel({ groupId, groupName, onClose }: TopicPanelProps): Re
                 ))}
               </div>
             )}
-            <div className="topic-evidence-list">
-              {evidence.map((item) => (
-                <article
-                  key={item.id}
-                  ref={(node) => {
-                    if (node) evidenceRefs.current.set(item.id, node)
-                    else evidenceRefs.current.delete(item.id)
-                  }}
-                  data-evidence-id={item.id}
-                >
-                  <label>
-                    <input
-                      type="checkbox"
-                      aria-label={`选择候选消息 ${item.id}`}
-                      checked={item.selected}
-                      onChange={() => toggleEvidence(item.id)}
-                    />
-                    <span>
-                      {summaryInvalid
-                        ? item.selected
-                          ? '人工保留'
-                          : '人工排除'
-                        : bundle.review === 'verified'
-                          ? item.selected
-                            ? 'AI 选中'
-                            : 'AI 排除'
-                          : '待核对候选'}
-                    </span>
-                  </label>
-                  <time dateTime={new Date(item.timestamp * 1000).toISOString()}>
-                    {formatTime(item.timestamp)}
-                  </time>
-                  <strong>
-                    {item.sender}
-                    {item.senderId ? ` (${item.senderId})` : ''}
-                  </strong>
-                  <p>{item.text}</p>
+            <div className="topic-evidence-grid">
+              {selectedEvidence && (
+                <aside className="topic-source" aria-label="消息来源摘录">
+                  <h4>消息来源摘录</h4>
+                  <strong>{selectedEvidence.sender}</strong>
+                  <time>{formatTime(selectedEvidence.timestamp)}</time>
+                  <p>{selectedEvidence.text}</p>
                   <small>
-                    入选理由：{item.reason} · 消息 ID：{item.messageId}
+                    {groupName} · 消息 ID：{selectedEvidence.messageId}
                   </small>
-                </article>
-              ))}
+                </aside>
+              )}
+              <div className="topic-evidence-list">
+                {evidence.map((item) => (
+                  <article
+                    key={item.id}
+                    ref={(node) => {
+                      if (node) evidenceRefs.current.set(item.id, node)
+                      else evidenceRefs.current.delete(item.id)
+                    }}
+                    data-evidence-id={item.id}
+                  >
+                    <label>
+                      <input
+                        type="checkbox"
+                        aria-label={`选择候选消息 ${item.id}`}
+                        checked={item.selected}
+                        onChange={() => toggleEvidence(item.id)}
+                      />
+                      <span>
+                        {summaryInvalid
+                          ? item.selected
+                            ? '人工保留'
+                            : '人工排除'
+                          : bundle.review === 'verified'
+                            ? item.selected
+                              ? 'AI 选中'
+                              : 'AI 排除'
+                            : '待核对候选'}
+                      </span>
+                    </label>
+                    <time dateTime={new Date(item.timestamp * 1000).toISOString()}>
+                      {formatTime(item.timestamp)}
+                    </time>
+                    <strong>
+                      {item.sender}
+                      {item.senderId ? ` (${item.senderId})` : ''}
+                    </strong>
+                    <p>{item.text}</p>
+                    <button type="button" onClick={() => setSelectedEvidenceId(item.id)}>
+                      查看来源摘录
+                    </button>
+                    <small>
+                      入选理由：{item.reason} · 消息 ID：{item.messageId}
+                    </small>
+                  </article>
+                ))}
+              </div>
             </div>
           </section>
         ) : null}
 
+        {!bundle && !busy && (
+          <div className="topics-empty">
+            <h4>每段讨论，都有值得留下的内容</h4>
+            <p>输入话题与时间范围，生成后在这里核对摘要和消息来源。</p>
+          </div>
+        )}
         <section className="topic-center" aria-label="话题订阅中心">
           <h4>每天 08:00（北京时间）</h4>
           <p>

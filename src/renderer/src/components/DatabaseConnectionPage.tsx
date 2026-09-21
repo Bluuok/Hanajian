@@ -1,3 +1,4 @@
+import { APP_BRAND } from '../brand'
 import React from 'react'
 import type { DatabaseKeyEnvironment, WechatAccountCandidate } from '../../../shared/database-key'
 import { WINDOWS_VC_RUNTIME_DOWNLOAD_URL } from '../../../shared/windows-runtime'
@@ -142,12 +143,14 @@ export function DatabaseConnectionPage({
 
   return (
     <main className="database-login-page">
-      <section className="database-login-brand" aria-label="TraceDigest 产品说明">
+      <section className="database-login-brand" aria-label={`${APP_BRAND.name} 产品说明`}>
         <div className="database-login-brand-content">
           <div className="database-login-logo" aria-hidden="true">
             <LineIcon name="database" />
           </div>
-          <h1>TraceDigest</h1>
+          <h1>
+            {APP_BRAND.name} · {APP_BRAND.englishName}
+          </h1>
           <p className="database-login-tagline">让 AI 读懂你的微信</p>
           <p className="database-login-description">
             连接成功后，你可以搜索聊天记录、生成群聊日报，并按需使用 AI 分析。
@@ -562,7 +565,7 @@ export function DatabaseConnectionPage({
             <Button variant="destructive" size="sm" onClick={onClearKey}>
               清除已保存密钥
             </Button>
-            <span>TraceDigest</span>
+            <span>{APP_BRAND.name}</span>
           </div>
         </div>
       </section>

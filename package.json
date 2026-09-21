@@ -2,7 +2,7 @@
   "name": "tracedigest",
   "version": "0.1.1",
   "packageManager": "pnpm@7.33.7",
-  "description": "TraceDigest 是基于 TraceMemo 二次开发的本地优先微信聊天总结工具，提供只读 Agent 和群聊总结能力。",
+  "description": "花笺 Hanajian（原 TraceDigest）是基于 TraceMemo 二次开发的本地优先微信聊天总结工具，提供只读 Agent 和群聊总结能力。",
   "keywords": [
     "wechat",
     "wechat chat",

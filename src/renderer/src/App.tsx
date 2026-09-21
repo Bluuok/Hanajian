@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { AppShell } from './components/layout/AppShell'
 import { SettingsWorkspace } from './features/settings/SettingsWorkspace'
 import { AgentHubWorkspace } from './features/agent-hub/AgentHubWorkspace'
+import { TopicsWorkspace } from './features/topics/TopicsWorkspace'
 import { AskAIWorkspace } from './features/ask-ai/AskAIWorkspace'
 import type { SettingsCategoryId } from './features/settings/model/types'
 import type {
@@ -238,7 +239,7 @@ function App(): React.ReactElement {
   const [connectionGuideStep, setConnectionGuideStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1)
   const [databaseEnvironment, setDatabaseEnvironment] = useState<DatabaseKeyEnvironment>()
   const connectionOperationRef = React.useRef(0)
-  const [activePage, setActivePage] = useState<AppPage>('ask-ai')
+  const [activePage, setActivePage] = useState<AppPage>('topics')
   const [settingsCategory, setSettingsCategory] = useState<SettingsCategoryId>('account-database')
   const [reportSourceContact, setReportSourceContact] = useState<Contact | null>(null)
   const [reportWorkspaceView, setReportWorkspaceView] = useState<ReportWorkspaceView>('result')
@@ -1772,6 +1773,8 @@ function App(): React.ReactElement {
 
   const renderCurrentWorkspace = (): React.ReactElement => {
     switch (activePage) {
+      case 'topics':
+        return <></>
       case 'ask-ai':
         return (
           <AskAIWorkspace
@@ -2004,6 +2007,14 @@ function App(): React.ReactElement {
           onOpenAISettings={openFirstUseAISettings}
         />
       )}
+      <TopicsWorkspace
+        contacts={contacts}
+        active={activePage === 'topics'}
+        onOpenChat={async (contact) => {
+          await handleSelectContact(contact)
+          setActivePage('ask-ai')
+        }}
+      />
       {renderCurrentWorkspace()}
     </AppShell>
   )

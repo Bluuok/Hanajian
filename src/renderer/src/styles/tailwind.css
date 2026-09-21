@@ -4,31 +4,31 @@
 
 @layer base {
   :root {
-    --tm-background: 216 22% 96%;
-    --tm-canvas: 210 25% 98.4%;
-    --tm-foreground: 222 25% 16%;
+    --tm-background: 30 33.333% 97.647%;
+    --tm-canvas: 30 33.333% 97.647%;
+    --tm-foreground: 209.143 25.18% 27.255%;
     --tm-surface: 0 0% 100%;
-    --tm-surface-muted: 216 20% 94%;
+    --tm-surface-muted: 20 13.043% 95.49%;
     --tm-surface-elevated: 0 0% 100%;
-    --tm-border: 215 16% 86%;
+    --tm-border: 212.727 25.581% 91.569%;
     --tm-border-subtle: 215 18% 92%;
-    --tm-primary: 166 52% 33%;
-    --tm-primary-hover: 166 55% 27%;
+    --tm-primary: 340.274 29.648% 51.569%;
+    --tm-primary-hover: 335.769 23.423% 43.529%;
     --tm-primary-foreground: 0 0% 100%;
-    --tm-secondary: 216 20% 94%;
+    --tm-secondary: 204 38.462% 94.902%;
     --tm-secondary-foreground: 222 25% 16%;
-    --tm-muted: 216 18% 92%;
-    --tm-muted-foreground: 218 10% 42%;
-    --tm-subtle-foreground: 218 9% 57%;
-    --tm-accent: 166 30% 90%;
-    --tm-accent-foreground: 166 52% 28%;
+    --tm-muted: 204 38.462% 94.902%;
+    --tm-muted-foreground: 211.765 14.286% 47.451%;
+    --tm-subtle-foreground: 211.765 14.286% 47.451%;
+    --tm-accent: 336.923 37.143% 93.137%;
+    --tm-accent-foreground: 335.769 23.423% 43.529%;
     --tm-ai: 236.8966 62.3656% 63.5294%;
     --tm-ai-soft: 236 78.9474% 96.2745%;
     --tm-success: 157.4194 50.2703% 36.2745%;
     --tm-warning: 33.5172 57.7689% 49.2157%;
     --tm-destructive: 0 50% 56.8627%;
     --tm-destructive-foreground: 0 0% 100%;
-    --tm-focus-ring: 166 52% 33%;
+    --tm-focus-ring: 340.274 29.648% 51.569%;
     --tm-disabled-surface: 216 20% 94%;
     --tm-disabled-foreground: 218 9% 57%;
     --tm-disabled-border: 215 18% 92%;

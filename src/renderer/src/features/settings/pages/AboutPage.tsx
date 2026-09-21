@@ -1,3 +1,4 @@
+import { APP_BRAND } from '../../../brand'
 import { useMemo, useState } from 'react'
 import { Button, Progress } from '../../../components/ui'
 import { useAppUpdateState } from '../../app-update/useAppUpdateState'
@@ -67,7 +68,7 @@ export function AboutPage({
       <header className="settings-page-header">
         <div>
           <h1>关于</h1>
-          <p>TraceDigest，本地优先、只读的 AI 微信聊天总结工具。</p>
+          <p>{APP_BRAND.name}，本地优先、只读的 AI 微信聊天总结工具。</p>
         </div>
       </header>
       <div className="settings-page-scroll">
@@ -75,7 +76,9 @@ export function AboutPage({
           <section className="settings-card about-identity-card">
             <div>
               <span className="settings-card-kicker">当前版本</span>
-              <strong>TraceDigest</strong>
+              <strong>
+                {APP_BRAND.name} · {APP_BRAND.englishName}
+              </strong>
               <small>v{update.currentVersion}</small>
             </div>
             <a href={REPOSITORY_URL} target="_blank" rel="noreferrer">
@@ -96,7 +99,9 @@ export function AboutPage({
                       : update.message || '检查 GitHub Releases 获取最新版本'}
               </strong>
               {update.delivery === 'disabled' ? (
-                <span>当前版本关闭了自动检查、自动下载和自动安装，请在 Releases 手动获取新版。</span>
+                <span>
+                  当前版本关闭了自动检查、自动下载和自动安装，请在 Releases 手动获取新版。
+                </span>
               ) : update.status === 'downloading' ? (
                 <div className="grid gap-2 pt-1">
                   <span className="text-sm font-semibold text-foreground">{percent}%</span>

@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   TopicCenterService,
   subscriptionWindow
@@ -10,6 +10,7 @@ import type { TopicBundle, TopicSubscription } from '../../src/shared/topic-dige
 
 const roots: string[] = []
 afterEach(() => {
+  vi.restoreAllMocks()
   roots.splice(0).forEach((r) => rmSync(r, { recursive: true, force: true }))
 })
 const rule: TopicSubscription = {
@@ -30,6 +31,9 @@ const rule: TopicSubscription = {
   enabled: true
 }
 const now = Date.parse('2026-09-12T08:00:00+08:00')
+beforeEach(() => {
+  vi.spyOn(Date, 'now').mockReturnValue(now)
+})
 function setup(generate = vi.fn().mockResolvedValue({ id: 'bundle' } as TopicBundle)): {
   center: TopicCenterService
   root: string

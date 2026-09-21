@@ -1,5 +1,5 @@
 appId: io.github.bluuok.tracedigest
-productName: TraceDigest
+productName: 花笺
 afterPack: scripts/after-pack.cjs
 directories:
   buildResources: build

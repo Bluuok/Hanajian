@@ -362,205 +362,6 @@ body {
   background: var(--wxex-bg-main);
 }
 
-.app-companion {
-  --companion-head-x: 0px;
-  --companion-head-y: 0px;
-  --companion-head-rotate: 0deg;
-  --companion-pupil-x: 0px;
-  --companion-pupil-y: 0px;
-  position: absolute;
-  z-index: 12;
-  left: 14px;
-  bottom: 14px;
-  width: 96px;
-  height: 126px;
-  pointer-events: none;
-  filter: drop-shadow(0 8px 10px rgba(93, 67, 73, 0.16));
-  animation: app-companion-bob 3.6s ease-in-out infinite;
-}
-
-.app-companion-art {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.app-companion-shadow {
-  fill: rgba(93, 67, 73, 0.18);
-}
-
-.app-companion-body {
-  stroke: #56484a;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.2;
-}
-
-.app-companion-leg {
-  fill: #ffe5d9;
-}
-
-.app-companion-sock {
-  fill: #fffcf6;
-}
-
-.app-companion-shoe {
-  fill: #6b4c4a;
-}
-
-.app-companion-skirt {
-  fill: #5c5961;
-}
-
-.app-companion-pleat,
-.app-companion-notebook-line {
-  fill: none;
-  stroke: #89818a;
-  stroke-width: 0.9;
-}
-
-.app-companion-blouse {
-  fill: #fffcf6;
-}
-
-.app-companion-cardigan {
-  fill: #bae7d5;
-}
-
-.app-companion-collar {
-  fill: #fffcf6;
-}
-
-.app-companion-bow {
-  fill: none;
-  stroke: #bf4e74;
-  stroke-width: 2.3;
-  stroke-linecap: round;
-}
-
-.app-companion-arm {
-  fill: #ffe5d9;
-}
-
-.app-companion-notebook {
-  fill: #f8b4b0;
-}
-
-.app-companion-head {
-  transform-box: fill-box;
-  transform-origin: 50% 72%;
-  transform: translate3d(var(--companion-head-x), var(--companion-head-y), 0) rotate(var(--companion-head-rotate));
-  transition: transform 180ms ease-out;
-}
-
-.app-companion-hair-back,
-.app-companion-bangs {
-  fill: #b48777;
-  stroke: #56484a;
-  stroke-linejoin: round;
-  stroke-width: 1.2;
-}
-
-.app-companion-face {
-  fill: #ffe5d9;
-  stroke: #56484a;
-  stroke-width: 1.1;
-}
-
-.app-companion-ear,
-.app-companion-hair-lock,
-.app-companion-brow,
-.app-companion-blush,
-.app-companion-mouth,
-.app-companion-hair-bow {
-  fill: none;
-  stroke: #56484a;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.app-companion-ear {
-  stroke: #d4877d;
-  stroke-width: 1;
-}
-
-.app-companion-hair-lock {
-  stroke: #8d675e;
-  stroke-width: 1.4;
-}
-
-.app-companion-brow {
-  stroke-width: 1;
-}
-
-.app-companion-eye-white {
-  fill: #fffcf6;
-  stroke: #56484a;
-  stroke-width: 1;
-}
-
-.app-companion-pupils {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-  transform: translate3d(var(--companion-pupil-x), var(--companion-pupil-y), 0);
-  transition: transform 120ms ease-out;
-}
-
-.app-companion-eye {
-  fill: #bf4e74;
-  stroke: #56484a;
-  stroke-width: 0.8;
-}
-
-.app-companion-eye-glint {
-  fill: #fffcf6;
-}
-
-.app-companion-blush {
-  stroke: #f08b94;
-  stroke-width: 1.5;
-}
-
-.app-companion-mouth {
-  stroke: #bf4e74;
-  stroke-width: 1.2;
-}
-
-.app-companion-hair-bow {
-  fill: #bae7d5;
-  stroke: #56484a;
-  stroke-width: 1;
-}
-
-@keyframes app-companion-bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-3px);
-  }
-}
-
-@media (max-width: 760px) {
-  .app-companion {
-    display: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app-companion {
-    animation: none;
-  }
-
-  .app-companion-head,
-  .app-companion-pupils {
-    transition: none;
-  }
-}
-
 .app-container {
   display: flex;
   width: 100%;
@@ -569,4 +370,137 @@ body {
   min-width: 0;
   align-items: stretch;
   overflow: hidden;
+}
+
+// Expanded desktop navigation follows the topic workspace proportions.
+.app-shell {
+  --wxex-nav-width: 152px;
+  --bg-color: var(--wxex-bg-main);
+  --sidebar-bg: var(--wxex-bg-sidebar);
+  --sidebar-hover: var(--wxex-bg-hover);
+  --sidebar-active: var(--wxex-brand-soft);
+  --chat-bg: var(--wxex-bg-main);
+  --message-bg-user: var(--wxex-brand-soft);
+  --message-bg-other: var(--wxex-bg-elevated);
+  --text-color: var(--wxex-text-primary);
+  --border-color: var(--wxex-border);
+}
+.app-brand {
+  width: 100%;
+  height: 52px;
+  display: flex;
+  gap: 8px;
+  img {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+  }
+}
+.app-brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  strong {
+    font-size: 17px;
+  }
+  em {
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 500;
+  }
+  small {
+    font-size: 10px;
+    color: var(--wxex-text-secondary);
+  }
+}
+.primary-navigation {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+.primary-nav-item {
+  flex-direction: row;
+  justify-content: flex-start;
+  padding: 0 12px;
+  height: 43px;
+  flex-basis: 43px;
+  gap: 10px;
+}
+.app-guide-launcher {
+  flex-direction: row;
+  min-height: 36px;
+}
+.app-rail-account {
+  margin-top: 4px;
+}
+.app-companion-dock {
+  width: 100%;
+  height: 155px;
+  flex: 0 0 155px;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  img {
+    height: 155px;
+    width: 100%;
+    min-height: 0;
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    pointer-events: none;
+  }
+}
+
+.chat-status-bar {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chat-status-bar > div:first-child {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.chat-status-actions {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.app-companion-control {
+  font-size: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--wxex-text-secondary);
+  padding: 5px;
+  cursor: pointer;
+}
+@media (max-width: 900px) {
+  .app-shell {
+    --wxex-nav-width: 70px;
+  }
+  .app-brand {
+    justify-content: center;
+  }
+  .app-brand-copy {
+    display: none;
+  }
+  .primary-nav-item {
+    flex-direction: column;
+    justify-content: center;
+    height: 54px;
+    flex-basis: 54px;
+    padding: 0;
+    gap: 3px;
+  }
+  .app-guide-launcher {
+    flex-direction: column;
+  }
+  .app-companion-dock,
+  .app-companion-control {
+    display: none;
+  }
+}
+@media (max-height: 700px) {
+  .app-companion-dock,
+  .app-companion-control {
+    display: none;
+  }
 }

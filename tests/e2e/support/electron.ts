@@ -26,6 +26,7 @@ export async function launchTestApp(
     now?: number
     appearanceTheme?: 'light' | 'dark'
     stableUserData?: string
+    initialPage?: 'topics' | 'ask-ai'
   } = {}
 ): Promise<TestApplication> {
   const ownsDirectory = !options.userData || Boolean(options.stableUserData)
@@ -59,6 +60,14 @@ export async function launchTestApp(
   })
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
+  // Existing message-workspace suites opt into their original starting workspace;
+  // topic-home suites explicitly exercise the new application landing page.
+  if (options.mode !== 'disconnected' && options.initialPage !== 'topics') {
+    await page
+      .getByRole('navigation', { name: '一级导航' })
+      .getByRole('button', { name: '问问 AI', exact: true })
+      .click()
+  }
   if (options.now) await page.clock.setFixedTime(options.now)
   const setWindowContentSize = async (size: { width: number; height: number }): Promise<void> => {
     await app.evaluate(({ BrowserWindow, screen }, nextSize) => {

@@ -472,7 +472,7 @@ function createWindow(): void {
     void dialog
       .showMessageBox(mainWindow, {
         type: 'question',
-        title: '关闭 TraceDigest',
+        title: '关闭 花笺',
         message: '请选择关闭方式',
         detail: '你可以将窗口隐藏到系统托盘，或退出整个应用进程。',
         buttons: ['最小化到系统托盘', '关闭进程', '取消'],
@@ -1965,7 +1965,7 @@ function buildTrayMenu(): Menu {
     },
     { type: 'separator' },
     {
-      label: '退出 TraceDigest',
+      label: '退出 花笺',
       click: () => {
         tray?.destroy()
         tray = null
@@ -1984,7 +1984,7 @@ function setupTray(): void {
       ? nativeImage.createEmpty()
       : image.resize({ width: traySize, height: traySize, quality: 'best' })
     tray = new Tray(trayImage)
-    tray.setToolTip('TraceDigest')
+    tray.setToolTip('花笺 · Hanajian')
     // macOS may show a Tray context menu on a primary click when it is set
     // directly on the Tray. Keep the menu for an explicit secondary click so
     // the primary click only restores the main window.

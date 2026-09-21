@@ -12,6 +12,12 @@ interface PrimaryNavigationProps {
 
 function NavIcon({ page }: NavIconProps): React.ReactElement {
   switch (page) {
+    case 'topics':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 7h7l2 2h9v11H3zM3 7V4h7l2 3" />
+        </svg>
+      )
     case 'ask-ai':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">

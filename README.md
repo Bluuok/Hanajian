@@ -1,4 +1,8 @@
-# TraceDigest
+# 花笺 Hanajian
+
+拾起聊天里的灵感。原项目名为 TraceDigest；本轮更新应用显示品牌，GitHub 地址、安装标识和本地数据目录继续兼容已有版本。
+
+新版入口为「话题整理」：选择群组与时间生成话题包，核对来源摘录，再进入消息与 AI 工作区。首页使用角色插画，聊天页左下角提供可收起的静态伙伴；自然转头的 Live2D 模型尚未接入。
 
 当前维护仓库：[Bluuok/TraceDigest](https://github.com/Bluuok/TraceDigest)，主分支为 `main`。项目由 Bluuok 独立维护，代码、问题反馈、下载和后续发布均以此仓库为准，不同步原仓库更新。
 

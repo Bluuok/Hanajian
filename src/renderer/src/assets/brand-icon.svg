@@ -1,8 +1,11 @@
 <svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="256" height="256" rx="48" fill="#022C22" />
-  <rect x="0.5" y="0.5" width="255" height="255" rx="47.5" stroke="#064E3B" />
-  <rect x="128" y="16.2742" width="158" height="158" rx="15" transform="rotate(45 128 16.2742)" stroke="#14B8A6" stroke-opacity="0.3" stroke-width="2" />
-  <rect x="65" y="65" width="126" height="126" rx="11" stroke="#14B8A6" stroke-opacity="0.5" stroke-width="2" />
-  <rect x="104" y="104" width="48" height="48" rx="24" fill="#14B8A6" />
-  <rect x="192" y="48" width="16" height="16" rx="8" fill="#2DD4BF" />
+<rect x="8" y="8" width="240" height="240" rx="60" fill="#F4E7EC"/>
+<rect x="49" y="43" width="158" height="178" rx="24" fill="#FFFCF6" stroke="#C6D7E3" stroke-width="8"/>
+<path d="M79 175H159M79 193H135" stroke="#B8CAD8" stroke-width="8" stroke-linecap="round"/>
+<g fill="#C77994"><ellipse cx="128" cy="88" rx="20" ry="31" transform="rotate(0 128 116)"/>
+<ellipse cx="128" cy="88" rx="20" ry="31" transform="rotate(72 128 116)"/>
+<ellipse cx="128" cy="88" rx="20" ry="31" transform="rotate(144 128 116)"/>
+<ellipse cx="128" cy="88" rx="20" ry="31" transform="rotate(216 128 116)"/>
+<ellipse cx="128" cy="88" rx="20" ry="31" transform="rotate(288 128 116)"/></g>
+<circle cx="128" cy="116" r="16" fill="#FFE2AA"/>
 </svg>

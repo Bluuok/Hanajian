@@ -1,4 +1,4 @@
-export type AppPage = 'ask-ai' | 'report' | 'agent-hub' | 'export' | 'settings'
+export type AppPage = 'topics' | 'ask-ai' | 'report' | 'agent-hub' | 'export' | 'settings'
 
 export interface NavigationItem {
   id: AppPage
@@ -6,6 +6,7 @@ export interface NavigationItem {
 }
 
 export const PRIMARY_NAV_ITEMS: NavigationItem[] = [
+  { id: 'topics', label: '话题整理' },
   { id: 'ask-ai', label: '问问 AI' },
   { id: 'report', label: '日报' },
   { id: 'agent-hub', label: 'Clawbot' },
