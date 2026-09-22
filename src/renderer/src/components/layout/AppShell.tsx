@@ -3,7 +3,7 @@ import { APP_BRAND } from '../../brand'
 import { AccountSummary } from '../account/AccountSummary'
 import { PrimaryNavigation } from './PrimaryNavigation'
 import { AppPage, PRIMARY_NAV_ITEMS } from './navigation'
-import recorder from '../../assets/illustrations/recorder.png'
+import { GazeCompanion } from '../../features/companion/GazeCompanion'
 import brandIcon from '../../assets/brand-icon.svg'
 
 interface SelfInfo {
@@ -105,23 +105,15 @@ export function AppShell({
             onClick={onOpenSettings}
           />
         </div>
-        {activePage === 'ask-ai' && (
-          <>
-            <button
-              type="button"
-              className="app-companion-control"
-              onClick={toggleCompanion}
-              aria-pressed={companionVisible}
-            >
-              {companionVisible ? '收起静态伙伴' : '显示静态伙伴'}
-            </button>
-            {companionVisible && (
-              <div className="app-companion-dock">
-                <img src={recorder} alt="抱着笔记本的记录员" />
-              </div>
-            )}
-          </>
-        )}
+        <button
+          type="button"
+          className="app-companion-control"
+          onClick={toggleCompanion}
+          aria-pressed={companionVisible}
+        >
+          {companionVisible ? '收起伙伴' : '显示伙伴'}
+        </button>
+        {companionVisible && <GazeCompanion />}
       </aside>
       <main className="app-shell-main" aria-label={activeItem?.label || '工作区'}>
         {children}
