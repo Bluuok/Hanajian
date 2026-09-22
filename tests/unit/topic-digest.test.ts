@@ -48,9 +48,10 @@ const source = [
   message('ad', '招聘广告 craft', 103),
   message('after', 'craft 后续', 1001)
 ]
+const sourceIds = collectTopicEvidence(query, source).map((e) => e.id)
 const answer = JSON.stringify({
-  selectedIds: ['E1', 'E2', 'E3'],
-  claims: [{ kind: '决定', text: '由周五改成周六', evidenceIds: ['E1', 'E2', 'E3'] }]
+  selectedIds: sourceIds,
+  claims: [{ kind: '决定', text: '由周五改成周六', evidenceIds: sourceIds }]
 })
 const adapter = (
   chat = vi.fn().mockResolvedValue({ success: true, data: answer })
@@ -88,14 +89,14 @@ describe('topic retrieval and evidence checks', () => {
     const bundle = await buildTopicBundle(query, dep)
     expect(dep.chat).toHaveBeenCalledTimes(2)
     expect(bundle.review).toBe('verified')
-    expect(bundle.claims[0].evidenceIds).toEqual(['E1', 'E2', 'E3'])
+    expect(bundle.claims[0].evidenceIds).toEqual(sourceIds)
     expect(() =>
       validateTopicAnalysis(JSON.stringify({ selectedIds: ['E999'], claims: [] }), bundle.evidence)
     ).toThrow()
     expect(() =>
       validateTopicAnalysis(
         JSON.stringify({
-          selectedIds: ['E1'],
+          selectedIds: [sourceIds[0]],
           claims: [{ kind: '决定', text: '无依据', evidenceIds: [] }]
         }),
         bundle.evidence

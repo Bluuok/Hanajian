@@ -17,7 +17,7 @@ export interface TopicEvidence {
   timestamp: number
   text: string
   type: string
-  reason: '关键词' | '引用关联' | '邻近上下文'
+  reason: '关键词' | '引用关联' | '邻近上下文' | '扩展关键词'
   selected: boolean
 }
 
@@ -25,6 +25,23 @@ export interface TopicClaim {
   kind: '事实' | '建议' | '决定' | '争议' | '待办' | '未解决'
   text: string
   evidenceIds: string[]
+}
+
+export type TopicDiagnosticCode =
+  | 'provider_unavailable'
+  | 'provider_timeout'
+  | 'upstream_error'
+  | 'invalid_model_output'
+  | 'invalid_evidence_reference'
+  | 'context_budget_exceeded'
+  | 'account_switched'
+  | 'retrieval_incomplete'
+  | 'media_unreadable'
+
+export interface TopicDiagnostic {
+  code: TopicDiagnosticCode
+  message: string
+  recoverable: boolean
 }
 
 export interface TopicBundle {
@@ -37,6 +54,8 @@ export interface TopicBundle {
   scannedCount: number
   complete: boolean
   warnings: string[]
+  /** Optional for bundles persisted before structured diagnostics. */
+  diagnostics?: TopicDiagnostic[]
   review: 'verified' | 'unavailable' | 'empty'
 }
 

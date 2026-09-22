@@ -112,7 +112,7 @@ import {
 import { installSafeConsole } from './safe-log'
 import { agentHubService } from './services/agent-hub-service'
 import { TopicCenterService } from './services/topic-center-service'
-import { buildTopicBundle } from './services/topic-digest-service'
+import { generateTopicBundle, topicPackageService } from './services/topic-package-service'
 import { personalWechatSendService } from './services/personal-wechat-send-service'
 import { PersonalWechatRuntimeManager } from './services/personal-wechat-runtime-manager'
 import type { PersonalWechatSendRequest } from '../shared/personal-wechat'
@@ -1774,8 +1774,10 @@ app.whenReady().then(async () => {
   const topicCenter = new TopicCenterService(
     join(app.getPath('userData'), 'topic-center'),
     () => (chat.isReady() ? chat.getCurrentAccountRoot() : ''),
-    buildTopicBundle
+    generateTopicBundle
   )
+  ipcMain.handle('topic:generatePackage', (_, request) => topicPackageService.generate(request))
+  ipcMain.handle('topic:locateSource', (_, locator) => topicPackageService.locate(locator))
   ipcMain.handle('topic:center', () => topicCenter.getState())
   ipcMain.handle('topic:saveSubscription', (_, input) => {
     if (input.recipient !== agentHubService.getStatus().wechatUserId)

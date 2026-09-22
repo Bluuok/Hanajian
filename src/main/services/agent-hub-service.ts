@@ -24,7 +24,8 @@ import { isPackagedRuntime } from '../runtime-mode'
 import { getChatDb, isReady } from './chat-service'
 import { AGENT_HUB_READ_TOOLS, executeAgentHubReadTool } from './agent-hub-read-tools'
 import { buildAgentHubSystemPrompt, normalizeAgentHubCustomInstructions } from './agent-hub-prompt'
-import { buildTopicBundle, TOPIC_QUERY_TOOL } from './topic-digest-service'
+import { TOPIC_QUERY_TOOL } from './topic-digest-service'
+import { generateTopicBundle as buildTopicBundle } from './topic-package-service'
 import { formatTopicBundle } from '../../shared/topic-digest'
 
 const execFileAsync = promisify(execFile)
