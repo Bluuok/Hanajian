@@ -1367,6 +1367,16 @@
   text-align: center;
   margin: 20px 0;
 
+  .state-doodle {
+    display: block;
+    width: 80px;
+    height: 64px;
+    max-width: 96px;
+    max-height: 80px;
+    object-fit: contain;
+    margin: 0 auto 12px;
+  }
+
   h3 {
     margin: 0 0 8px;
     font-size: 16px;

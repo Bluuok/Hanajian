@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { TopicsHomePage } from '../../src/renderer/src/features/topics/TopicsHomePage'
+import { TopicEmptyState } from '../../src/renderer/src/features/topics/components/TopicEmptyState'
 import type { Contact } from '../../src/shared/types'
 import type { TopicBundle } from '../../src/shared/topic-digest'
 import type { TopicPackage } from '../../src/shared/topic-package'
@@ -145,6 +146,17 @@ describe('TopicsHomePage Defect Regression Tests', () => {
       })
     } as unknown as typeof window.api
   })
+
+  it.each(['initial', 'no_results', 'no_group'] as const)(
+    'declares bounded artwork dimensions for the %s empty state',
+    (variant) => {
+      const { container } = render(<TopicEmptyState variant={variant} topic="craft" />)
+      const artwork = container.querySelector('.state-doodle')
+
+      expect(artwork).toHaveAttribute('width', '80')
+      expect(artwork).toHaveAttribute('height', '64')
+    }
+  )
 
   it('Defect 1: does NOT reset evidence selection or summaryInvalid when switching between E1 and E2', async () => {
     const user = userEvent.setup()
