@@ -1,0 +1,42 @@
+/* Proposed light-mode contract. Import once; never inject at runtime. */
+.hj-topic-skin {
+  --hj-canvas: #fbf9f7;
+  --hj-paper: #ffffff;
+  --hj-paper-muted: #faf8f7;
+  --hj-text: #344657;
+  --hj-text-secondary: #637487;
+  --hj-border: #e7e9ed;
+  --hj-mint: #eaf6f1;
+  --hj-blue: #eef5f8;
+  --hj-rose: #fbe9ef;
+  --hj-yellow: #fff4df;
+  --hj-sage: #e7f1e6;
+  --hj-action: #b54c73;
+  --hj-action-hover: #963b5e;
+  --hj-action-text: #ffffff;
+  --hj-rose-ink: #91455f;
+  --hj-mint-ink: #426b61;
+  --hj-focus: #345f85;
+  --hj-error: #a53045;
+  --hj-space-1: 4px;
+  --hj-space-2: 8px;
+  --hj-space-3: 12px;
+  --hj-space-4: 16px;
+  --hj-space-5: 20px;
+  --hj-space-6: 24px;
+  --hj-radius-control: 8px;
+  --hj-radius-card: 12px;
+  --hj-radius-chip: 999px;
+  --hj-shadow: 0 2px 8px rgb(67 62 65 / 4%);
+  --hj-font: 'Microsoft YaHei', 'PingFang SC', system-ui, sans-serif;
+  --hj-nav-width: 152px;
+  --hj-groups-width: 180px;
+  --hj-control-height: 36px;
+  --hj-title-size: 28px;
+  --hj-body-size: 13px;
+  --hj-meta-size: 11px;
+  --hj-evidence-gap: 12px;
+  --hj-empty-art-width: 80px;
+  --hj-empty-art-height: 64px;
+  --hj-motion: 140ms;
+}

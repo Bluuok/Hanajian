@@ -1,0 +1,32 @@
+{
+  "scope": "失败方案分支源码审查 + 提取规则复现 + 静态HTML/CSS几何验收；不等于应用完成",
+  "sourceBranch": "失败方案",
+  "sourceCommit": "4b3431356c48cd4589c75efe4a2d87bdcb7d74d5",
+  "sourcePR": 4,
+  "browser": "144.0.7559.96",
+  "isolatedEmptyState": {
+    "viewport": [1457, 709],
+    "original": {"image": {"width": 1038.984375, "height": 831.1875}, "stateHeight": 1000.515625, "gridWidth": 1081, "gridOverflow": 0},
+    "fixed": {"image": {"width": 80, "height": 64}, "stateHeight": 201.328125, "gridWidth": 1081, "gridOverflow": -0.015625}
+  },
+  "geometry": {
+    "viewports": [[1182,745],[1073,668],[1280,800],[1440,900],[900,700],[700,600],[480,700]],
+    "states": ["ready","idle","loading","empty","error","ai_failed","invalid"],
+    "passedCases": 49,
+    "componentCases": [
+      {"part":"hero","width":530,"overflow":0},
+      {"part":"filter","width":520,"overflow":0},
+      {"part":"summary","width":520,"overflow":0},
+      {"part":"state","width":520,"overflow":0},
+      {"part":"evidence","width":414,"overflow":0},
+      {"part":"source","width":298,"overflow":0},
+      {"part":"related","width":822,"overflow":0}
+    ],
+    "pageErrors": [],
+    "negativeControl": {"mutation":"empty-art width:1000px","observedWidth":1000,"wouldFailWidthGuard":true}
+  },
+  "gridCounterexample": "Exact minmax(0,58%) minmax(0,42%) rule did not overflow in this Chromium reproduction; fr proposal is readability, not a confirmed overflow bug.",
+  "inspectedScreenshots": ["repro-0.png","repro-1.png","contract-1182-ready.png","contract-1182-idle.png","contract-1073-ready.png"],
+  "notVerified": ["完整Electron运行","真实微信与AI服务","Windows硬件DPI","新人物原画制作与审美通过","生产TSX截图回归基线","全仓安全审计"],
+  "finalVisualAcceptance": "NOT PASSED: geometric prototype intentionally uses a labeled artwork placeholder; production artwork and integration remain implementation gates."
+}
