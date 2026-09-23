@@ -158,6 +158,80 @@ describe('TopicsHomePage Defect Regression Tests', () => {
     }
   )
 
+  it('offers a real way to explore again when related topics are unavailable', async () => {
+    const user = userEvent.setup()
+    render(<TopicsHomePage contacts={fixtureContacts} active={true} onOpenChat={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: '生成话题包' }))
+    const explore = await screen.findByRole('button', { name: '继续探索新话题' })
+    expect(screen.getByText('暂无可靠的关联话题')).toBeInTheDocument()
+
+    await user.click(explore)
+    expect(screen.getByRole('searchbox', { name: '话题' })).toHaveFocus()
+    expect(window.api.generateTopicPackage).toHaveBeenCalledTimes(1)
+  })
+
+  it('restores each group query, result, evidence selection, source, and reading position', async () => {
+    const user = userEvent.setup()
+    const { container } = render(
+      <TopicsHomePage contacts={fixtureContacts} active={true} onOpenChat={vi.fn()} />
+    )
+    await user.click(screen.getByRole('button', { name: '生成话题包' }))
+    await screen.findByRole('checkbox', { name: '选择候选消息 E1' })
+    await user.click(screen.getByRole('checkbox', { name: '选择候选消息 E1' }))
+    await user.click(screen.getByRole('button', { name: '查看原文 E2' }))
+    await waitFor(() =>
+      expect(screen.getByRole('complementary', { name: '消息来源摘录' })).toHaveTextContent(
+        '数据库完整原文'
+      )
+    )
+    const main = container.querySelector<HTMLElement>('.topics-main')!
+    const list = container.querySelector<HTMLElement>('.topic-evidence-items')!
+    main.scrollTop = 48
+    list.scrollTop = 36
+
+    await user.click(screen.getByRole('button', { name: /技术交流群/ }))
+    expect(screen.queryByRole('checkbox', { name: '选择候选消息 E1' })).not.toBeInTheDocument()
+    await user.clear(screen.getByRole('searchbox', { name: '话题' }))
+    await user.type(screen.getByRole('searchbox', { name: '话题' }), '另一个话题')
+    const otherBundle = {
+      ...sampleBundle,
+      id: 'bundle-2',
+      query: { ...sampleBundle.query, groupId: 'group2-md5', topic: '另一个话题' }
+    }
+    const otherPackage = {
+      ...samplePackage,
+      topicId: 'bundle-2',
+      groupId: 'group2-md5',
+      topic: '另一个话题',
+      evidences: samplePackage.evidences.map((item) => ({
+        ...item,
+        sourceLocator: { ...item.sourceLocator, groupId: 'group2-md5' }
+      }))
+    }
+    vi.mocked(window.api.generateTopicPackage).mockResolvedValueOnce({
+      success: true,
+      package: otherPackage,
+      bundle: otherBundle,
+      fromCache: false
+    })
+    await user.click(screen.getByRole('button', { name: '生成话题包' }))
+    await screen.findByRole('checkbox', { name: '选择候选消息 E1' })
+
+    await user.click(screen.getByRole('button', { name: /产品测试群/ }))
+    expect(screen.getByRole('searchbox', { name: '话题' })).toHaveValue('craft')
+    expect(screen.getByRole('checkbox', { name: '选择候选消息 E1' })).not.toBeChecked()
+    expect(screen.getByRole('alert')).toHaveTextContent('原 AI 结论已失效')
+    expect(screen.getByRole('complementary', { name: '消息来源摘录' })).toHaveTextContent('#2')
+    expect(main.scrollTop).toBe(48)
+    expect(container.querySelector<HTMLElement>('.topic-evidence-items')?.scrollTop).toBe(36)
+    expect(window.api.generateTopicPackage).toHaveBeenCalledTimes(2)
+
+    await user.click(screen.getByRole('button', { name: /技术交流群/ }))
+    expect(screen.getByRole('searchbox', { name: '话题' })).toHaveValue('另一个话题')
+    expect(screen.getByRole('checkbox', { name: '选择候选消息 E1' })).toBeChecked()
+  })
+
   it('Defect 1: does NOT reset evidence selection or summaryInvalid when switching between E1 and E2', async () => {
     const user = userEvent.setup()
     const onOpenChat = vi.fn()

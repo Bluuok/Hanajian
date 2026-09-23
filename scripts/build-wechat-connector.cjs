@@ -2,11 +2,11 @@
 const { execFileSync } = require('node:child_process')
 const fs = require('node:fs')
 const path = require('node:path')
+const { resolveGoRuntime } = require('./go-runtime.cjs')
 
 const projectRoot = path.resolve(__dirname, '..')
 const sourceDir = path.join(projectRoot, 'services', 'wechat-connector')
 const outputRoot = path.join(projectRoot, 'resources', 'connectors', 'wechat')
-
 function normalizePlatform(value) {
   if (value === 'win32' || value === 'windows') return 'windows'
   if (value === 'darwin' || value === 'macos') return 'darwin'
@@ -46,6 +46,8 @@ if (!fs.existsSync(path.join(sourceDir, 'go.mod'))) {
   throw new Error(`Repository-local WeChat connector source is missing: ${sourceDir}`)
 }
 
+// Resolve and verify Go before touching an existing connector build.
+const goRuntime = resolveGoRuntime()
 for (const target of parseTargets()) {
   const directoryName = `${target.goos === 'windows' ? 'win32' : target.goos}-${target.goarch === 'amd64' ? 'x64' : target.goarch}`
   const outputDir = path.join(outputRoot, directoryName)
@@ -55,9 +57,9 @@ for (const target of parseTargets()) {
   )
   fs.rmSync(outputDir, { recursive: true, force: true })
   fs.mkdirSync(outputDir, { recursive: true })
-  execFileSync('go', ['build', '-trimpath', '-o', outputPath, '.'], {
+  execFileSync(goRuntime.executable, ['build', '-trimpath', '-o', outputPath, '.'], {
     cwd: sourceDir,
-    env: { ...process.env, GOOS: target.goos, GOARCH: target.goarch, CGO_ENABLED: '0' },
+    env: { ...goRuntime.env, GOOS: target.goos, GOARCH: target.goarch, CGO_ENABLED: '0' },
     stdio: 'inherit'
   })
   if (target.goos !== 'windows') fs.chmodSync(outputPath, 0o755)

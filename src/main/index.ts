@@ -125,6 +125,10 @@ import type {
 import { appLogger } from './app-logger'
 import { wcdbDebugLog } from './wcdb-debug'
 
+if (process.env.TRACEDIGEST_DISABLE_GPU === '1') {
+  app.disableHardwareAcceleration()
+}
+
 let getMessagesRequestSequence = 0
 
 function nextGetMessagesRequestId(): string {

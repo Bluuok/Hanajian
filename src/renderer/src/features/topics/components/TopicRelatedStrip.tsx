@@ -5,12 +5,14 @@ interface TopicRelatedStripProps {
   relatedTopics: TopicPackage['relatedTopics']
   capabilities?: TopicPackage['capabilities']
   onSelectTopic?: (topicTitle: string) => void
+  onExplore?: () => void
 }
 
 export function TopicRelatedStrip({
   relatedTopics,
   capabilities,
-  onSelectTopic
+  onSelectTopic,
+  onExplore
 }: TopicRelatedStripProps): React.ReactElement {
   const getTopicIcon = (index: number): React.ReactElement => {
     switch (index % 4) {
@@ -73,6 +75,11 @@ export function TopicRelatedStrip({
             ✧
           </span>
           <span>暂无可靠的关联话题</span>
+          {onExplore && (
+            <button type="button" onClick={onExplore}>
+              继续探索新话题
+            </button>
+          )}
         </div>
       ) : (
         <div className="topic-related-cards-grid">

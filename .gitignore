@@ -5,6 +5,7 @@ node_modules
 dist
 out
 .env
+.go-runtime.json
 .DS_Store
 .eslintcache
 *.log*

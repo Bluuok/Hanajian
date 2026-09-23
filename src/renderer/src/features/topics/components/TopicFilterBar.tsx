@@ -4,6 +4,7 @@ import { previousTopicDay, topicDateTimeInput } from '../../../../../shared/topi
 import { TopicSubscriptionDrawer } from './TopicSubscriptionDrawer'
 
 interface TopicFilterBarProps {
+  topicInputRef?: React.Ref<HTMLInputElement>
   groupId: string
   topic: string
   setTopic: (v: string) => void
@@ -32,6 +33,7 @@ interface TopicFilterBarProps {
 }
 
 export function TopicFilterBar({
+  topicInputRef,
   groupId,
   topic,
   setTopic,
@@ -113,6 +115,7 @@ export function TopicFilterBar({
             </svg>
           </span>
           <input
+            ref={topicInputRef}
             type="search"
             aria-label="话题"
             value={topic}

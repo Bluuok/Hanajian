@@ -1073,6 +1073,18 @@ const topicFixturePackage = (query) => {
     ]
   }
 
+  const requestedEvidenceCount = Math.min(
+    300,
+    Math.max(0, Number(process.env.WXE_E2E_TOPIC_EVIDENCE_COUNT) || 0)
+  )
+  if (query.topic === 'craft' && requestedEvidenceCount > 2) {
+    for (let index = 3; index <= requestedEvidenceCount; index += 1) {
+      const id = `E${index}`
+      bundleEvidence.push({ ...bundleEvidence[1], id })
+      packageEvidences.push({ ...packageEvidences[1], id })
+    }
+  }
+
   const nowSeconds = Math.floor(Date.now() / 1000)
   const bundle = {
     id: `fixture-topic-package-${query.topic || 'default'}-${Date.now()}`,

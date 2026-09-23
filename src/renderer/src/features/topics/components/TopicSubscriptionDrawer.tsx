@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 import type {
   TopicCenterState,
   TopicSubscription,
@@ -183,7 +184,7 @@ export function TopicSubscriptionDrawer({
       (item) => item.query?.groupId === groupId || groupSubscriptionIds.has(item.subscriptionId)
     ) || []
 
-  return (
+  return createPortal(
     <div className="topic-subscription-drawer-overlay" onClick={onClose}>
       <aside
         ref={drawerRef}
@@ -389,6 +390,7 @@ export function TopicSubscriptionDrawer({
           </div>
         </div>
       </aside>
-    </div>
+    </div>,
+    document.body
   )
 }

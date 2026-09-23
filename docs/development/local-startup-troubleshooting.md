@@ -30,9 +30,20 @@ WCDB_DEBUG_LOGS=1 pnpm dev
 go version
 ```
 
-命令不可用表示当前终端的 `PATH` 没有找到 Go。Windows 默认安装位置是 `C:\Program Files\Go\bin`。确认 Go 已安装并把该目录加入系统 `PATH` 后，关闭并重新打开终端或 IDE，再重新执行 `go version` 和 `pnpm dev`。
+命令不可用表示当前终端的 `PATH` 没有找到 Go。Windows 默认安装位置是 `C:\Program Files\Go\bin`。也可以在仓库根目录创建不提交的 `.go-runtime.json`，指向已有的 Go 安装和模块缓存：
+
+```json
+{
+  "goExecutable": "E:\\path\\to\\go\\bin\\go.exe",
+  "goPath": "E:\\path\\to\\go-cache"
+}
+```
+
+`goPath` 可省略；也可仅用 `TRACEDIGEST_GO_EXE` 环境变量指定可执行文件。构建脚本会先确认 Go 可执行，再处理旧连接器产物。
 
 如果 Go 刚完成安装，已经打开的终端不会自动继承新的环境变量；重开终端是必要步骤。不要绕过连接器构建直接启动 `electron-vite dev`，否则 Agent Hub 的微信连接器不会生成。
+
+只需查看前端页面时，可运行 `pnpm dev:ui`。它启动 Electron 和页面热更新，跳过微信连接器构建。此模式不能验证 Agent Hub 微信连接器功能；完整开发请运行 `pnpm dev`。
 
 ## Electron 二进制缺失或下载失败
 

@@ -10,6 +10,25 @@ import type {
 
 export type TopicStatus = 'idle' | 'loading' | 'success' | 'empty' | 'error' | 'ai_failed'
 
+interface TopicPackageSnapshot {
+  status: TopicStatus
+  pkg: TopicPackage | null
+  bundle: TopicBundle | null
+  fromCache: boolean
+  error: TopicError | null
+  sourceLoading: boolean
+  sourceMessage: TopicSourceMessage | null
+  sourceError: TopicError | null
+  activeLocator: TopicSourceLocator | null
+}
+
+function statusForPackage(pkg: TopicPackage | null): TopicStatus {
+  if (!pkg) return 'idle'
+  if (pkg.review === 'unavailable' || pkg.notices.some((notice) => notice.code === 'AI_FAILED'))
+    return 'ai_failed'
+  return pkg.evidences.length === 0 ? 'empty' : 'success'
+}
+
 export function useTopicPackage(groupId: string): {
   status: TopicStatus
   pkg: TopicPackage | null
@@ -41,6 +60,29 @@ export function useTopicPackage(groupId: string): {
   const generateSeqRef = React.useRef(0)
   const sourceSeqRef = React.useRef(0)
   const currentGroupRef = React.useRef(groupId)
+  const snapshotsRef = React.useRef(new Map<string, TopicPackageSnapshot>())
+  const currentSnapshotRef = React.useRef<TopicPackageSnapshot>({
+    status,
+    pkg,
+    bundle,
+    fromCache,
+    error,
+    sourceLoading,
+    sourceMessage,
+    sourceError,
+    activeLocator
+  })
+  currentSnapshotRef.current = {
+    status,
+    pkg,
+    bundle,
+    fromCache,
+    error,
+    sourceLoading,
+    sourceMessage,
+    sourceError,
+    activeLocator
+  }
 
   const clearSource = React.useCallback(() => {
     sourceSeqRef.current += 1
@@ -50,19 +92,31 @@ export function useTopicPackage(groupId: string): {
     setSourceLoading(false)
   }, [])
 
-  // When group changes, invalidate any in-flight requests and clear group-specific state
-  React.useEffect(() => {
+  // Keep completed views per group while invalidating requests that are still in flight.
+  React.useLayoutEffect(() => {
     if (currentGroupRef.current !== groupId) {
+      const previous = currentSnapshotRef.current
+      if (currentGroupRef.current) {
+        snapshotsRef.current.set(currentGroupRef.current, {
+          ...previous,
+          status: previous.status === 'loading' ? statusForPackage(previous.pkg) : previous.status,
+          sourceMessage: previous.sourceLoading ? null : previous.sourceMessage,
+          sourceError: previous.sourceLoading ? null : previous.sourceError,
+          activeLocator: previous.sourceLoading ? null : previous.activeLocator
+        })
+      }
       currentGroupRef.current = groupId
       generateSeqRef.current += 1
       sourceSeqRef.current += 1
-      setStatus('idle')
-      setPkg(null)
-      setBundle(null)
-      setError(null)
-      setSourceMessage(null)
-      setSourceError(null)
-      setActiveLocator(null)
+      const restored = snapshotsRef.current.get(groupId)
+      setStatus(restored?.status ?? 'idle')
+      setPkg(restored?.pkg ?? null)
+      setBundle(restored?.bundle ?? null)
+      setFromCache(restored?.fromCache ?? false)
+      setError(restored?.error ?? null)
+      setSourceMessage(restored?.sourceMessage ?? null)
+      setSourceError(restored?.sourceError ?? null)
+      setActiveLocator(restored?.activeLocator ?? null)
       setSourceLoading(false)
     }
   }, [groupId])
@@ -119,7 +173,8 @@ export function useTopicPackage(groupId: string): {
         }
         return true
       } catch (cause) {
-        if (seq !== generateSeqRef.current) return false
+        if (seq !== generateSeqRef.current || currentGroupRef.current !== query.groupId)
+          return false
         setError({
           code: 'DEPENDENCY_FAILED',
           message: cause instanceof Error ? cause.message : '话题生成失败，请重试',
@@ -152,7 +207,7 @@ export function useTopicPackage(groupId: string): {
         setSourceMessage(null)
       }
     } catch (cause) {
-      if (seq !== sourceSeqRef.current) return
+      if (seq !== sourceSeqRef.current || currentGroupRef.current !== locator.groupId) return
       setSourceError({
         code: 'DEPENDENCY_FAILED',
         message: cause instanceof Error ? cause.message : '原文加载失败',
@@ -160,7 +215,7 @@ export function useTopicPackage(groupId: string): {
       })
       setSourceMessage(null)
     } finally {
-      if (seq === sourceSeqRef.current) {
+      if (seq === sourceSeqRef.current && currentGroupRef.current === locator.groupId) {
         setSourceLoading(false)
       }
     }

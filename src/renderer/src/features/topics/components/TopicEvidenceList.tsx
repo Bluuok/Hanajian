@@ -41,7 +41,7 @@ export function TopicEvidenceList({
         </div>
       </header>
 
-      <div className="topic-evidence-items">
+      <div className="topic-evidence-items" tabIndex={0} aria-label="滚动查看关键证据">
         {evidence.map((item, idx) => (
           <TopicEvidenceItem
             key={item.id}

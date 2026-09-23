@@ -3,6 +3,20 @@ import type { Contact } from '../../../../../shared/types'
 import type { TopicPackage } from '../../../../../shared/topic-package'
 import { previousTopicDay, TOPIC_TIMEZONE } from '../../../../../shared/topic-time'
 
+interface GroupViewSnapshot {
+  topic: string
+  aliases: string
+  excludes: string
+  memberIds: string
+  start: string
+  end: string
+  dateError: string
+  selectedEvidenceId: string
+  evidence: TopicPackage['evidences']
+  summaryInvalid: boolean
+  showAdvanced: boolean
+}
+
 export const splitList = (value: string): string[] => [
   ...new Set(
     value
@@ -60,13 +74,13 @@ export function useTopicsHomeState(
     [contacts]
   )
 
-  const [groupId, setGroupId] = React.useState(() => initialGroupId || groups[0]?.md5 || '')
+  const [groupId, setGroupIdInternal] = React.useState(() => initialGroupId || groups[0]?.md5 || '')
 
   React.useEffect(() => {
     if (initialGroupId) {
-      setGroupId(initialGroupId)
+      setGroupIdInternal(initialGroupId)
     } else if (!groupId && groups.length > 0) {
-      setGroupId(groups[0].md5)
+      setGroupIdInternal(groups[0].md5)
     }
   }, [initialGroupId, groups, groupId])
 
@@ -99,6 +113,40 @@ export function useTopicsHomeState(
   const [summaryInvalid, setSummaryInvalid] = React.useState(false)
   const [showAdvanced, setShowAdvanced] = React.useState(false)
   const [showSubscription, setShowSubscription] = React.useState(false)
+  const groupSnapshotsRef = React.useRef(new Map<string, GroupViewSnapshot>())
+
+  const setGroupId = (nextGroupId: string): void => {
+    if (nextGroupId === groupId) return
+    if (groupId) {
+      groupSnapshotsRef.current.set(groupId, {
+        topic,
+        aliases,
+        excludes,
+        memberIds,
+        start,
+        end,
+        dateError,
+        selectedEvidenceId,
+        evidence,
+        summaryInvalid,
+        showAdvanced
+      })
+    }
+    const restored = groupSnapshotsRef.current.get(nextGroupId)
+    setTopic(restored?.topic ?? 'craft')
+    setAliases(restored?.aliases ?? '')
+    setExcludes(restored?.excludes ?? '')
+    setMemberIds(restored?.memberIds ?? '')
+    setStartInternal(restored?.start ?? initialRange.start)
+    setEndInternal(restored?.end ?? initialRange.end)
+    setDateError(restored?.dateError ?? '')
+    setSelectedEvidenceId(restored?.selectedEvidenceId ?? '')
+    setEvidence(restored?.evidence ?? [])
+    setSummaryInvalid(restored?.summaryInvalid ?? false)
+    setShowAdvanced(restored?.showAdvanced ?? false)
+    setShowSubscription(false)
+    setGroupIdInternal(nextGroupId)
+  }
 
   const name = React.useCallback(
     (item: Contact): string => item.m_nsNickName || item.remark || item.m_nsUsrName,

@@ -30,6 +30,7 @@ export async function launchTestApp(
     topicAiFailed?: boolean
     topicDependencyError?: boolean
     topicEmpty?: boolean
+    topicEvidenceCount?: number
     imageKeyMissing?: boolean
   } = {}
 ): Promise<TestApplication> {
@@ -59,6 +60,7 @@ export async function launchTestApp(
       WXE_E2E_TOPIC_AI_FAILED: options.topicAiFailed ? '1' : '0',
       WXE_E2E_TOPIC_DEPENDENCY_ERROR: options.topicDependencyError ? '1' : '0',
       WXE_E2E_TOPIC_EMPTY: options.topicEmpty ? '1' : '0',
+      WXE_E2E_TOPIC_EVIDENCE_COUNT: String(options.topicEvidenceCount || 0),
       WXE_E2E_IMAGE_KEY_MISSING: options.imageKeyMissing ? '1' : '0',
       WXE_E2E_UPDATE_SIMULATION: options.updateSimulation ? '1' : '0',
       WXE_E2E_UNSIGNED_MAC_UPDATE: options.unsignedMacUpdate ? '1' : '0',

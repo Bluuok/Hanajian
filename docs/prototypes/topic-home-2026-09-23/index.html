@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fdfcfa">
+  <title>话题整理 · TraceDigest 视觉样板</title>
+  <style>
+    :root {
+      /* 来自参考截图的取样颜色，换算为 OKLch；衍生色只调整明度/透明度。 */
+      --bg: oklch(0.991 0.003 84.6);
+      --surface: oklch(0.997 0.001 106.4);
+      --fg: oklch(0.358 0.046 252.7);
+      --muted: oklch(0.657 0.025 248.2);
+      --border: oklch(0.920 0.004 219.5);
+      --accent: oklch(0.720 0.117 2.5);
+      --accent-strong: oklch(0.62 0.13 2.5);
+      --rose-soft: oklch(0.969 0.012 29.9);
+      --mint: oklch(0.962 0.015 171.1);
+      --mint-strong: oklch(0.78 0.07 168);
+      --mist: oklch(0.965 0.012 214);
+      --display: "SimHei", "Microsoft YaHei", sans-serif;
+      --body: "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+      --mono: Consolas, monospace;
+      --nav-w: 220px;
+      --groups-w: 266px;
+      color-scheme: light;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { font-family: var(--body); color: var(--fg); background: var(--bg); }
+    body { margin: 0; min-width: 320px; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid var(--accent-strong); outline-offset: 3px; }
+    button:disabled { cursor: not-allowed; opacity: .55; }
+    svg { flex: 0 0 auto; }
+    .icon { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .app { display: grid; grid-template-columns: var(--nav-w) var(--groups-w) minmax(0, 1fr); min-height: 100vh; max-height: 100vh; overflow: hidden; }
+    .primary-nav { position: relative; display: flex; flex-direction: column; min-height: 0; padding: 24px 13px 16px; background: oklch(0.991 0.009 25); border-right: 1px solid oklch(from var(--accent) l c h / .13); }
+    .brand { display: flex; align-items: center; gap: 10px; min-height: 51px; padding: 0 8px 24px; text-decoration: none; color: var(--fg); }
+    .brand-mark { display: grid; place-items: center; width: 37px; height: 39px; border: 2px solid oklch(from var(--accent) l c h / .67); border-radius: 7px 10px 7px 10px; transform: rotate(-8deg); background: var(--surface); color: var(--accent-strong); box-shadow: 3px 3px 0 oklch(from var(--accent) l c h / .18); }
+    .brand-mark .icon { width: 22px; height: 22px; }
+    .brand-name { font: 700 23px/1 var(--display); letter-spacing: -.035em; white-space: nowrap; }
+    .brand-sub { display: block; margin-top: 6px; color: var(--muted); font-size: 10px; letter-spacing: .14em; white-space: nowrap; }
+    .nav-list { display: grid; gap: 7px; }
+    .nav-button { display: flex; align-items: center; gap: 13px; width: 100%; min-height: 51px; padding: 0 14px; border: 0; border-radius: 14px; background: transparent; color: var(--fg); font-size: 15px; font-weight: 700; text-align: left; }
+    .nav-button .icon { color: oklch(0.48 0.055 245); }
+    .nav-button:hover { background: oklch(0.969 0.016 27); }
+    .nav-button[aria-current="page"] { background: oklch(0.961 0.027 13); color: var(--accent-strong); }
+    .nav-button[aria-current="page"] .icon { color: var(--accent-strong); }
+    .nav-bottom { margin-top: auto; display: grid; gap: 11px; min-height: 0; }
+    .connection { display: flex; align-items: center; gap: 10px; min-height: 65px; padding: 11px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); }
+    .connection .icon { color: var(--muted); }
+    .connection strong { display: block; font-size: 13px; }
+    .connection small { display: block; margin-top: 3px; font-size: 10px; line-height: 1.4; color: var(--muted); }
+    .companion { padding: 12px 13px; min-height: 90px; border: 1px solid oklch(from var(--accent) l c h / .18); border-radius: 15px; background: var(--surface); box-shadow: 0 8px 24px oklch(from var(--accent) l c h / .06); }
+    .companion .eyebrow { color: var(--accent-strong); font-size: 10px; font-weight: 800; letter-spacing: .09em; }
+    .companion strong { display: block; margin-top: 5px; font-size: 13px; }
+    .companion p { margin: 3px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .groups { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 27px 12px 15px; background: var(--surface); border-right: 1px solid var(--border); }
+    .groups-head { display: flex; align-items: center; justify-content: space-between; padding: 0 7px 15px; }
+    .groups-head h2 { margin: 0; font: 700 18px/1.2 var(--display); }
+    .group-actions { display: flex; gap: 2px; }
+    .icon-button { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--fg); }
+    .icon-button:hover { background: var(--rose-soft); border-color: oklch(from var(--accent) l c h / .13); }
+    .group-search { display: none; margin: 0 5px 9px; width: calc(100% - 10px); height: 40px; padding: 0 11px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); outline: none; }
+    .group-search.is-open { display: block; }
+    .group-list { display: grid; align-content: start; gap: 5px; overflow: auto; padding: 0 2px 4px; }
+    .group { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 65px; padding: 8px; border: 1px solid transparent; border-radius: 14px; background: transparent; color: var(--fg); text-align: left; }
+    .group:hover { background: oklch(0.978 0.010 30); }
+    .group.is-active { background: oklch(0.968 0.018 17); }
+    .group-avatar { display: grid; place-items: center; flex: 0 0 48px; width: 48px; height: 48px; border-radius: 14px; color: var(--fg); font: 800 17px/1 var(--display); }
+    .group-avatar.mint { background: oklch(0.88 0.07 170); }.group-avatar.blue { background: oklch(0.88 0.055 245); }.group-avatar.ice { background: oklch(0.92 0.034 242); }.group-avatar.leaf { background: oklch(0.91 0.05 163); }.group-avatar.gray { background: oklch(0.91 0.008 250); }.group-avatar.rose { background: oklch(0.93 0.034 17); }.group-avatar.lilac { background: oklch(0.91 0.035 300); }
+    .group-copy { display: block; min-width: 0; flex: 1; }
+    .group-copy strong { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .group-copy small { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; white-space: nowrap; }
+    .count { display: grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 20px; background: var(--accent-strong); color: var(--surface); font: 700 11px var(--mono); }
+    .workspace { min-width: 0; min-height: 0; overflow: auto; padding: 20px 22px 24px; scrollbar-color: oklch(from var(--accent) l c h / .23) transparent; }
+    .page { max-width: 1240px; margin: 0 auto; }
+    .stage { position: relative; isolation: isolate; min-height: 430px; overflow: hidden; border: 1px solid oklch(0.942 0.008 27); border-radius: 19px; background: var(--surface); box-shadow: 0 9px 34px oklch(0.67 0.035 25 / .055); }
+    .stage::before { content: ""; position: absolute; z-index: -1; width: 340px; height: 340px; right: -95px; top: -110px; border-radius: 50%; background: oklch(0.985 0.012 169); }
+    .stage::after { content: ""; position: absolute; z-index: -1; left: 16px; right: 16px; bottom: 15px; height: 176px; border-radius: 16px; background: var(--mint); }
+    .stage-content { position: relative; z-index: 2; padding: 26px 30px 18px; width: calc(100% - 294px); min-width: 0; }
+    .title-row { display: flex; align-items: flex-start; gap: 15px; }
+    .title-icon { display: grid; place-items: center; flex: 0 0 53px; width: 53px; height: 53px; border-radius: 13px; color: var(--surface); background: oklch(0.78 0.09 18); box-shadow: 4px 5px 0 oklch(from var(--accent) l c h / .18); }
+    .title-icon .icon { width: 29px; height: 29px; stroke-width: 1.6; }
+    h1 { margin: 0; font: 800 clamp(26px, 2.35vw, 36px)/1.15 var(--display); letter-spacing: .015em; }
+    .subtitle { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .sample-badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 9px; padding: 5px 9px; border: 1px solid oklch(from var(--accent) l c h / .26); border-radius: 99px; color: var(--accent-strong); background: oklch(0.984 0.01 22); font-size: 10px; font-weight: 800; }
+    .sample-badge::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    .stage-controls { display: grid; grid-template-columns: minmax(145px, 1.3fr) minmax(120px, .67fr) minmax(160px, .75fr); gap: 9px; margin-top: 24px; }
+    .input-wrap { position: relative; display: flex; align-items: center; min-width: 0; height: 47px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--muted); }
+    .input-wrap:focus-within { border-color: var(--accent-strong); box-shadow: 0 0 0 3px oklch(from var(--accent) l c h / .14); }
+    .input-wrap > .icon { margin-left: 12px; }
+    .search-input { min-width: 0; width: 100%; height: 100%; padding: 0 8px; border: 0; background: transparent; color: var(--fg); outline: none; font-size: 13px; font-weight: 700; }
+    .search-input::placeholder { color: var(--muted); }
+    .clear-search { display: grid; place-items: center; flex: 0 0 36px; width: 36px; height: 36px; margin-right: 4px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); }
+    .clear-search:hover { background: var(--rose-soft); color: var(--fg); }
+    .clear-search .icon { width: 15px; height: 15px; }
+    .date-control { display: flex; align-items: center; min-width: 0; padding: 0 11px; }
+    .date-control .icon { width: 18px; height: 18px; }
+    .date-control select { flex: 1; min-width: 0; width: 100%; height: 100%; border: 0; padding: 0 7px; appearance: none; outline: none; background: transparent; color: var(--fg); font-size: 12px; font-weight: 700; cursor: pointer; }
+    .date-control:focus-within { border-color: var(--accent-strong); box-shadow: 0 0 0 3px oklch(from var(--accent) l c h / .14); }
+    .primary-action { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 47px; padding: 0 14px; border: 1px solid var(--accent-strong); border-radius: 12px; background: var(--accent-strong); color: var(--surface); font-size: 13px; font-weight: 800; white-space: nowrap; box-shadow: 0 6px 16px oklch(from var(--accent) l c h / .16); }
+    .primary-action:hover { background: oklch(0.56 0.13 2.5); border-color: oklch(0.56 0.13 2.5); color: var(--surface); }
+    .primary-action .icon { width: 17px; height: 17px; }
+    .filters { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 13px; }
+    .filter { min-height: 34px; padding: 0 13px; border: 1px solid transparent; border-radius: 30px; background: oklch(0.967 0.006 235); color: var(--fg); font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .filter:hover { border-color: var(--accent); background: oklch(0.95 0.014 20); }
+    .filter[aria-pressed="true"] { color: var(--accent-strong); background: oklch(0.956 0.029 12); }
+    .filter b { margin-left: 5px; font: 700 10px var(--mono); }
+    .summary { margin-top: 29px; min-height: 149px; padding: 18px 13px 16px 13px; }
+    .summary-head { display: flex; align-items: flex-start; gap: 13px; }
+    .summary-icon { display: grid; place-items: center; flex: 0 0 46px; width: 46px; height: 46px; border-radius: 14px; color: var(--surface); background: var(--mint-strong); }
+    .summary-icon .icon { width: 25px; height: 25px; }
+    .summary h2 { margin: 2px 0 7px; font: 800 clamp(17px, 1.45vw, 23px)/1.25 var(--display); }
+    .summary-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; color: oklch(0.52 0.048 170); font-size: 11px; font-weight: 700; }
+    .summary-meta span { padding: 3px 8px; border-radius: 30px; background: oklch(0.91 0.033 172); }
+    .summary-meta span:first-child { background: oklch(0.955 0.037 14); color: var(--accent-strong); }
+    .summary-meta time { margin-left: 5px; }
+    .summary p { margin: 11px 0 0; max-width: 690px; font-size: 13px; line-height: 1.7; font-weight: 600; overflow-wrap: anywhere; }
+    .character { position: absolute; z-index: 1; right: 8px; top: 9px; height: 398px; width: auto; max-width: none; object-fit: contain; object-position: bottom right; pointer-events: none; filter: drop-shadow(0 12px 18px oklch(0.52 0.04 15 / .08)); }
+    .stage-stamp { position: absolute; z-index: 0; top: 39px; right: 267px; color: oklch(0.75 0.095 14); font: 700 14px/1.5 var(--display); transform: rotate(-8deg); text-align: center; letter-spacing: .1em; pointer-events: none; }
+    .star { position: absolute; z-index: 1; color: oklch(0.82 0.11 76); width: 29px; height: 29px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; pointer-events: none; }
+    .star.one { top: 9px; right: 223px; transform: rotate(16deg); }.star.two { top: 152px; right: 13px; width: 20px; height: 20px; }.star.three { top: 233px; right: 286px; width: 15px; height: 15px; color: var(--accent); }
+    .results { margin-top: 12px; padding: 16px 16px 14px; border: 1px solid oklch(0.942 0.008 27); border-radius: 18px; background: var(--surface); box-shadow: 0 7px 27px oklch(0.67 0.035 25 / .04); }
+    .section-heading { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font: 800 15px/1.2 var(--display); }
+    .section-heading .icon { width: 19px; height: 19px; color: var(--accent-strong); }
+    .result-grid { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(275px, .82fr); gap: 14px; }
+    .evidence-list { display: grid; align-content: start; gap: 7px; }
+    .evidence { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 70px; padding: 8px 10px; border: 1px solid transparent; border-radius: 12px; background: oklch(0.991 0.002 100); color: var(--fg); text-align: left; }
+    .evidence:hover { border-color: oklch(from var(--accent) l c h / .33); background: oklch(0.981 0.014 20); }
+    .evidence[aria-selected="true"] { border-color: oklch(from var(--accent) l c h / .4); background: oklch(0.985 0.015 17); }
+    .ev-index { display: grid; place-items: center; flex: 0 0 27px; width: 27px; height: 27px; border-radius: 50%; background: oklch(0.958 0.030 13); color: var(--accent-strong); font: 800 12px var(--mono); }
+    .ev-avatar { display: grid; place-items: center; flex: 0 0 37px; width: 37px; height: 37px; border-radius: 50%; background: oklch(0.91 0.03 29); color: var(--fg); font-size: 12px; font-weight: 800; }
+    .ev-avatar.sky { background: oklch(0.91 0.035 237); }.ev-avatar.green { background: oklch(0.91 0.045 166); }
+    .ev-body { display: block; min-width: 0; flex: 1; }
+    .ev-line { display: flex; align-items: baseline; gap: 9px; font-size: 11px; }
+    .ev-line strong { font-size: 12px; }.ev-line time { color: var(--muted); font-size: 10px; }
+    .ev-quote { display: -webkit-box; margin-top: 4px; color: oklch(0.48 0.026 250); font-size: 12px; line-height: 1.45; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+    .ev-link { flex: 0 0 auto; color: var(--accent-strong); font-size: 10px; font-weight: 800; white-space: nowrap; }
+    .source { min-width: 0; padding: 13px; border-radius: 14px; background: var(--mist); }
+    .source-title { display: flex; align-items: center; gap: 7px; margin: 0 0 10px; font: 800 13px/1.2 var(--display); }
+    .source-title .icon { width: 17px; height: 17px; }
+    .source-title span { margin-left: auto; color: var(--muted); font: 700 11px var(--mono); }
+    .message { min-height: 190px; padding: 14px; border: 1px solid oklch(0.93 0.012 210); border-radius: 12px; background: var(--surface); }
+    .message-author { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+    .message-author .ev-avatar { width: 32px; height: 32px; flex-basis: 32px; font-size: 11px; }
+    .message-author time { margin-left: auto; color: var(--muted); font-size: 10px; }
+    .message blockquote { margin: 10px 0 0; padding: 0; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+    .source-foot { display: flex; gap: 7px; align-items: center; margin-top: 12px; }
+    .source-foot span { padding: 4px 8px; border-radius: 20px; background: var(--mist); color: oklch(0.48 0.026 250); font-size: 10px; font-weight: 700; }
+    .related { margin-top: 12px; padding: 15px 16px 16px; border: 1px solid oklch(0.942 0.008 27); border-radius: 18px; background: var(--surface); }
+    .related-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .related-head small { color: var(--accent-strong); font-size: 10px; font-weight: 700; }
+    .related-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+    .related-card { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 65px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--fg); text-align: left; }
+    .related-card:hover, .related-card[aria-pressed="true"] { border-color: var(--accent); background: var(--rose-soft); }
+    .related-icon { display: grid; place-items: center; flex: 0 0 37px; width: 37px; height: 37px; border-radius: 11px; background: oklch(0.96 0.034 77); color: oklch(0.61 0.09 75); font: 800 17px var(--display); }
+    .related-card:nth-child(2) .related-icon { background: oklch(0.96 0.025 10); color: var(--accent-strong); }.related-card:nth-child(3) .related-icon { background: oklch(0.94 0.035 163); color: oklch(0.52 0.06 163); }
+    .related-copy { min-width: 0; }.related-copy strong { display: block; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }.related-copy small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .empty { display: none; padding: 30px; border: 1px dashed var(--border); border-radius: 14px; background: var(--surface); text-align: center; font-size: 13px; line-height: 1.6; }
+    .empty.is-visible { display: block; }.page.is-empty .stage, .page.is-empty .results, .page.is-empty .related { display: none; }
+    .toast { position: fixed; z-index: 20; right: 25px; bottom: 24px; max-width: min(380px, calc(100vw - 48px)); padding: 12px 16px; border: 1px solid oklch(from var(--accent) l c h / .22); border-radius: 11px; background: var(--fg); color: var(--surface); font-size: 12px; line-height: 1.5; box-shadow: 0 14px 30px oklch(0.35 0.02 250 / .2); opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .18s, transform .18s; }
+    .toast.is-visible { opacity: 1; transform: translateY(0); }
+    @media (max-width: 1450px) {
+      :root { --nav-w: 76px; --groups-w: 212px; }
+      .primary-nav { padding-left: 9px; padding-right: 9px; align-items: center; }
+      .brand { padding: 0 0 22px; }.brand-text, .nav-label, .connection div, .companion { display: none; }
+      .nav-list { width: 100%; }.nav-button { justify-content: center; padding: 0; }.nav-button .icon { width: 22px; height: 22px; }
+      .connection { justify-content: center; width: 54px; min-height: 54px; }
+      .groups { padding-left: 8px; padding-right: 8px; }.group { gap: 7px; }.group-avatar { flex-basis: 42px; width: 42px; height: 42px; }.group-copy strong { font-size: 12px; }
+      .workspace { padding: 16px; }.stage-content { width: calc(100% - 252px); padding-left: 24px; padding-right: 18px; }.character { height: 375px; right: -4px; top: 25px; }.stage-stamp { right: 225px; }
+    }
+    @media (max-width: 1160px) {
+      :root { --nav-w: 66px; --groups-w: 190px; }
+      .stage { min-height: 417px; }.stage-content { width: calc(100% - 205px); padding: 24px 14px 14px 21px; }.stage-controls { grid-template-columns: minmax(120px, 1.2fr) minmax(100px, .62fr); gap: 7px; margin-top: 19px; }.primary-action { grid-column: 1 / -1; justify-self: start; min-width: 182px; min-height: 42px; }.character { height: 330px; top: 62px; right: -14px; }.stage-stamp { display: none; }.star.one { right: 170px; }.star.three { right: 205px; }.summary { margin-top: 19px; padding-top: 14px; }.summary p { font-size: 11px; }.result-grid { grid-template-columns: minmax(0, 1fr) minmax(270px, .85fr); gap: 9px; }.evidence { padding: 7px; gap: 6px; }.ev-link { display: none; }
+    }
+    @media (max-width: 860px) {
+      :root { --groups-w: 0px; }
+      .groups { display: none; }.stage-content { width: calc(100% - 215px); }.stage-controls { grid-template-columns: 1fr; }.primary-action { grid-column: auto; }.character { height: 325px; }.summary { margin-top: 14px; }.stage { min-height: 493px; }.stage::after { height: 177px; }.result-grid { grid-template-columns: 1fr; }.message { min-height: auto; }.related-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      :root { --nav-w: 0px; }.app { display: block; max-height: none; overflow: visible; }.primary-nav { position: sticky; z-index: 5; top: 0; width: 100%; height: 56px; flex-direction: row; justify-content: space-between; padding: 7px 12px; border-right: 0; border-bottom: 1px solid var(--border); }.brand { padding: 0; }.brand-mark { width: 33px; height: 33px; }.brand-text { display: block; }.brand-name { font-size: 17px; }.brand-sub { display: none; }.nav-list { display: flex; gap: 2px; width: auto; }.nav-button { width: 40px; min-height: 40px; }.nav-bottom { display: none; }
+      .workspace { overflow: visible; padding: 10px; }.stage { min-height: 0; padding-bottom: 0; }.stage-content { width: 100%; padding: 20px 17px 13px; }.title-icon { flex-basis: 45px; width: 45px; height: 45px; }.title-row { gap: 10px; width: calc(100% - 123px); }h1 { font-size: 25px; }.subtitle { max-width: 190px; font-size: 11px; }.sample-badge { max-width: 185px; font-size: 9px; line-height: 1.4; }.stage-controls { display: grid; grid-template-columns: 1fr 118px; margin-top: 75px; }.primary-action { grid-column: 1 / -1; justify-self: stretch; }.filters { gap: 5px; }.filter { min-height: 31px; padding: 0 10px; font-size: 10px; }
+      .character { top: 6px; right: -13px; height: 188px; opacity: .96; }.stage::after { left: 10px; right: 10px; bottom: 10px; height: 185px; }.summary { margin-top: 13px; padding: 14px 3px 10px; min-height: 168px; }.summary-head { gap: 8px; }.summary-icon { flex-basis: 36px; width: 36px; height: 36px; border-radius: 10px; }.summary h2 { font-size: 16px; }.summary p { margin-top: 9px; font-size: 11px; line-height: 1.6; }.star, .stage-stamp { display: none; }
+      .results, .related { padding: 13px 10px; }.related-head small { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6zM15 3v4h4M9 11h6M9 15h6"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 10v11h14V10M9 21v-7h6v7"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 4h16v13H9l-5 4zM8 9h8M8 13h5"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12 12 3h8l1 8-9 10zM16.5 7.5h.01"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M9 20V5M14 20v-8M19 20V8"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M10 3h4l.6 2.4 2 .9 2.2-1.1 2.4 2.8-1.5 2 .3 2 1.9 1.6-1.5 3.4-2.5-.2-1.5 1.4-.2 2.5H9.7l-.3-2.5-1.5-1.4-2.5.2-1.5-3.4L5.8 12l.3-2-1.5-2L7 5.2l2.2 1.1 2-.9zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><path d="M8 3v6M16 3v6M5 9h14v3a7 7 0 0 1-7 7v3M12 19a7 7 0 0 1-7-7z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M5 5 19 19M19 5 5 19"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="m5 9 7 7 7-7"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 2 2.1 7.9L22 12l-7.9 2.1L12 22l-2.1-7.9L2 12l7.9-2.1z"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M2 7a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v11H2z"/></symbol>
+    <symbol id="i-clip" viewBox="0 0 24 24"><path d="m8 12 6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l9-9"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2 3 6.3 7 .9-5.1 4.9 1.2 7-6.1-3.3-6.1 3.3 1.2-7L2 9.2l7-.9z"/></symbol>
+  </svg>
+  <div class="app" data-od-id="topic-home-app">
+    <aside class="primary-nav" data-od-id="primary-navigation" aria-label="主导航">
+      <a class="brand" href="#top" data-od-id="brand-home" aria-label="TraceDigest 首页"><span class="brand-mark"><svg class="icon"><use href="#i-note"/></svg></span><span class="brand-text"><span class="brand-name">TraceDigest</span><span class="brand-sub">让聊天更有收获</span></span></a>
+      <nav class="nav-list" aria-label="功能">
+        <button class="nav-button" type="button" aria-current="page" data-nav="话题整理" data-od-id="nav-topics"><svg class="icon"><use href="#i-home"/></svg><span class="nav-label">话题整理</span></button>
+        <button class="nav-button" type="button" data-nav="消息浏览" data-od-id="nav-messages"><svg class="icon"><use href="#i-chat"/></svg><span class="nav-label">消息浏览</span></button>
+        <button class="nav-button" type="button" data-nav="兴趣标签" data-od-id="nav-tags"><svg class="icon"><use href="#i-tag"/></svg><span class="nav-label">兴趣标签</span></button>
+        <button class="nav-button" type="button" data-nav="数据洞察" data-od-id="nav-insights"><svg class="icon"><use href="#i-chart"/></svg><span class="nav-label">数据洞察</span></button>
+        <button class="nav-button" type="button" data-nav="设置" data-od-id="nav-settings"><svg class="icon"><use href="#i-settings"/></svg><span class="nav-label">设置</span></button>
+      </nav>
+      <div class="nav-bottom">
+        <div class="connection" data-od-id="connection-status"><svg class="icon"><use href="#i-plug"/></svg><div><strong>未连接真实账号</strong><small>此页仅展示固定样板数据</small></div></div>
+        <div class="companion" data-od-id="companion-area"><span class="eyebrow">整理伙伴</span><strong>从一段讨论里，读出一点灵感。</strong><p>伙伴区域独立留白，不被装饰遮挡。</p></div>
+      </div>
+    </aside>
+    <aside class="groups" data-od-id="group-sidebar" aria-label="群组">
+      <div class="groups-head"><h2 data-od-id="groups-heading">群组</h2><div class="group-actions"><button class="icon-button" id="toggleGroupSearch" type="button" aria-label="搜索群组" aria-expanded="false" data-od-id="group-search-toggle"><svg class="icon"><use href="#i-search"/></svg></button><button class="icon-button" type="button" id="addGroup" aria-label="添加群组" data-od-id="add-group"><svg class="icon"><use href="#i-plus"/></svg></button></div></div>
+      <input class="group-search" id="groupSearch" type="search" placeholder="搜索样板群组" aria-label="搜索样板群组" data-od-id="group-search-input">
+      <div class="group-list" id="groupList">
+        <button class="group is-active" type="button" data-group="设计交流站" data-od-id="group-design"><span class="group-avatar mint">设</span><span class="group-copy"><strong>设计交流站</strong><small>样板群组 · 09:24</small></span><span class="count">3</span></button>
+        <button class="group" type="button" data-group="前端同学" data-od-id="group-frontend"><span class="group-avatar blue">码</span><span class="group-copy"><strong>前端同学</strong><small>样板群组</small></span></button>
+        <button class="group" type="button" data-group="产品茶话会" data-od-id="group-product"><span class="group-avatar ice">产</span><span class="group-copy"><strong>产品茶话会</strong><small>样板群组</small></span></button>
+        <button class="group" type="button" data-group="生活分享" data-od-id="group-life"><span class="group-avatar leaf">生</span><span class="group-copy"><strong>生活分享</strong><small>样板群组</small></span></button>
+        <button class="group" type="button" data-group="摄影爱好者" data-od-id="group-photo"><span class="group-avatar gray">影</span><span class="group-copy"><strong>摄影爱好者</strong><small>样板群组</small></span></button>
+        <button class="group" type="button" data-group="读书会" data-od-id="group-reading"><span class="group-avatar rose">书</span><span class="group-copy"><strong>读书会</strong><small>样板群组</small></span></button>
+        <button class="group" type="button" data-group="游戏小队" data-od-id="group-games"><span class="group-avatar lilac">游</span><span class="group-copy"><strong>游戏小队</strong><small>样板群组</small></span></button>
+      </div>
+    </aside>
+    <main class="workspace" id="top" data-od-id="topic-workspace"><div class="page" id="page">
+      <section class="stage" data-od-id="shared-story-stage" aria-labelledby="pageTitle">
+        <div class="stage-content">
+          <div class="title-row"><span class="title-icon"><svg class="icon"><use href="#i-folder"/></svg></span><div><h1 id="pageTitle" data-od-id="topic-heading">话题整理</h1><p class="subtitle">从群聊中提炼有价值的讨论，让重要想法不再被淹没。</p><span class="sample-badge" data-od-id="sample-label">固定样板数据 · 非真实群聊</span></div></div>
+          <div class="stage-controls" data-od-id="topic-controls">
+            <label class="input-wrap"><svg class="icon"><use href="#i-search"/></svg><input class="search-input" id="topicSearch" type="search" value="craft" placeholder="搜索话题关键词" aria-label="搜索话题关键词" data-od-id="topic-search"><button class="clear-search" id="clearSearch" type="button" aria-label="清空搜索"><svg class="icon"><use href="#i-close"/></svg></button></label>
+            <label class="input-wrap date-control"><svg class="icon"><use href="#i-calendar"/></svg><select id="dateFilter" aria-label="选择日期范围" data-od-id="date-filter"><option value="yesterday">昨天 · 9月22日</option><option value="week">最近七天</option><option value="all">全部日期</option></select><svg class="icon"><use href="#i-down"/></svg></label>
+            <button class="primary-action" id="generate" type="button" data-od-id="generate-topic"><svg class="icon"><use href="#i-spark"/></svg>生成话题包</button>
+          </div>
+          <div class="filters" role="group" aria-label="话题类别" data-od-id="topic-filters"><button class="filter" type="button" data-filter="全部" aria-pressed="true">全部 <b>1</b></button><button class="filter" type="button" data-filter="产品" aria-pressed="false">产品 <b>1</b></button><button class="filter" type="button" data-filter="使用体验" aria-pressed="false">使用体验 <b>1</b></button><button class="filter" type="button" data-filter="功能建议" aria-pressed="false">功能建议 <b>0</b></button><button class="filter" type="button" data-filter="其他" aria-pressed="false">其他 <b>0</b></button></div>
+          <div class="summary" data-od-id="craft-summary"><div class="summary-head"><span class="summary-icon"><svg class="icon"><use href="#i-folder"/></svg></span><div><h2 data-od-id="craft-summary-heading">1. Craft 的使用体验与推荐</h2><div class="summary-meta"><span>产品</span><span>3 条证据</span><time datetime="2026-09-22">9月22日</time></div></div></div><p>大家分享了对 Craft 的整体使用感受：清爽的界面让长篇内容更容易阅读；适合整理知识与写作，也有人提出希望在归档和检索上更灵活。</p></div>
+        </div>
+        <span class="stage-stamp" aria-hidden="true">把好讨论<br>轻轻收好</span><svg class="star one" aria-hidden="true"><use href="#i-star"/></svg><svg class="star two" aria-hidden="true"><use href="#i-star"/></svg><svg class="star three" aria-hidden="true"><use href="#i-star"/></svg>
+        <img class="character" src="../../../src/renderer/src/assets/hanajian/hero/topic-recorder-scene.png" width="1086" height="1448" alt="抱着笔记本向读者挥手的棕发记录员，身旁有花叶" data-od-id="topic-recorder-illustration">
+      </section>
+      <section class="results" data-od-id="evidence-and-source" aria-labelledby="evidenceHeading"><div class="result-grid"><div><h2 class="section-heading" id="evidenceHeading" data-od-id="evidence-heading"><svg class="icon"><use href="#i-clip"/></svg>关键证据 <span id="evidenceCount">（3）</span></h2><div class="evidence-list" role="listbox" aria-label="关键证据">
+        <button class="evidence" type="button" role="option" aria-selected="true" data-evidence="0" data-od-id="evidence-1"><span class="ev-index">1</span><span class="ev-avatar">阿沐</span><span class="ev-body"><span class="ev-line"><strong>阿沐</strong><time datetime="2026-09-22T10:24">10:24</time></span><span class="ev-quote">我最近在用 Craft，感觉界面很干净，写文档很舒服。</span></span><span class="ev-link">查看原文 ↗</span></button>
+        <button class="evidence" type="button" role="option" aria-selected="false" data-evidence="1" data-od-id="evidence-2"><span class="ev-index">2</span><span class="ev-avatar sky">Luna</span><span class="ev-body"><span class="ev-line"><strong>Luna</strong><time datetime="2026-09-22T11:03">11:03</time></span><span class="ev-quote">我也在用，适合做知识整理，尤其是笔记之间的关联。</span></span><span class="ev-link">查看原文 ↗</span></button>
+        <button class="evidence" type="button" role="option" aria-selected="false" data-evidence="2" data-od-id="evidence-3"><span class="ev-index">3</span><span class="ev-avatar green">Kirin</span><span class="ev-body"><span class="ev-line"><strong>Kirin</strong><time datetime="2026-09-22T14:17">14:17</time></span><span class="ev-quote">我主要用来整理项目资料，归档和检索如果再灵活一点就更好了。</span></span><span class="ev-link">查看原文 ↗</span></button>
+      </div></div><aside class="source" aria-labelledby="sourceTitle" data-od-id="original-message-panel"><h2 class="source-title" id="sourceTitle"><svg class="icon"><use href="#i-chat"/></svg>原始消息 <span id="sourceIndex">#1</span></h2><div class="message"><div class="message-author"><span class="ev-avatar" id="sourceAvatar">阿沐</span><strong id="sourceName">阿沐</strong><time id="sourceTime" datetime="2026-09-22T10:24">9月22日 10:24</time></div><blockquote id="sourceText">我最近在用 Craft，感觉界面很干净，写文档很舒服。页面之间的关联做得不错，适合整理一些长期的知识内容。</blockquote><div class="source-foot"><span>设计交流站</span><span>样板原文</span></div></div></aside></div></section>
+      <section class="related" data-od-id="related-topics" aria-labelledby="relatedHeading"><div class="related-head"><h2 class="section-heading" id="relatedHeading" data-od-id="related-heading"><svg class="icon"><use href="#i-chat"/></svg>相关话题</h2><small>延续同一场讨论</small></div><div class="related-grid">
+        <button class="related-card" type="button" data-related="Craft 的功能建议：归档与检索" aria-pressed="false" data-od-id="related-archive"><span class="related-icon">01</span><span class="related-copy"><strong>Craft 的功能建议：归档与检索</strong><small>样板相关话题</small></span></button>
+        <button class="related-card" type="button" data-related="Craft 与其他工具的对比" aria-pressed="false" data-od-id="related-comparison"><span class="related-icon">02</span><span class="related-copy"><strong>Craft 与其他工具的对比</strong><small>样板相关话题</small></span></button>
+        <button class="related-card" type="button" data-related="适合 Craft 的写作场景" aria-pressed="false" data-od-id="related-writing"><span class="related-icon">03</span><span class="related-copy"><strong>适合 Craft 的写作场景</strong><small>样板相关话题</small></span></button>
+      </div></section>
+      <div class="empty" id="emptyState" role="status" data-od-id="empty-state">这组固定样板数据没有匹配的结果。<br>选择「设计交流站」、搜索 craft 并查看昨天的数据即可返回样板结果。</div>
+    </div></main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    const messages = [
+      { name: '阿沐', time: '9月22日 10:24', iso: '2026-09-22T10:24', avatar: '阿沐', avatarClass: '', text: '我最近在用 Craft，感觉界面很干净，写文档很舒服。页面之间的关联做得不错，适合整理一些长期的知识内容。' },
+      { name: 'Luna', time: '9月22日 11:03', iso: '2026-09-22T11:03', avatar: 'Luna', avatarClass: 'sky', text: '我也在用，适合做知识整理，尤其是笔记之间的关联。现在把资料放在一起，回头再读也比较顺。' },
+      { name: 'Kirin', time: '9月22日 14:17', iso: '2026-09-22T14:17', avatar: 'Kirin', avatarClass: 'green', text: '我主要用来整理项目资料，归档和检索如果再灵活一点就更好了。现在偶尔会花时间找很早以前的页面。' }
+    ];
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => [...document.querySelectorAll(s)];
+    let activeGroup = '设计交流站';
+    let activeFilter = '全部';
+    let toastTimer;
+    function toast(message) { const el = $('#toast'); el.textContent = message; el.classList.add('is-visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('is-visible'), 3200); }
+    function updateView() {
+      const query = $('#topicSearch').value.trim().toLowerCase();
+      const queryMatches = !query || 'craft 的使用体验与推荐'.includes(query) || '话题整理'.includes(query);
+      const visible = activeGroup === '设计交流站' && (activeFilter === '全部' || activeFilter === '产品' || activeFilter === '使用体验') && queryMatches;
+      $('#page').classList.toggle('is-empty', !visible);
+      $('#emptyState').classList.toggle('is-visible', !visible);
+    }
+    $$('.evidence').forEach((button) => button.addEventListener('click', () => {
+      const index = Number(button.dataset.evidence), item = messages[index];
+      $$('.evidence').forEach((el) => el.setAttribute('aria-selected', String(el === button)));
+      $('#sourceIndex').textContent = '#' + (index + 1);
+      $('#sourceAvatar').textContent = item.avatar;
+      $('#sourceAvatar').className = 'ev-avatar ' + item.avatarClass;
+      $('#sourceName').textContent = item.name;
+      $('#sourceTime').textContent = item.time;
+      $('#sourceTime').dateTime = item.iso;
+      $('#sourceText').textContent = item.text;
+    }));
+    $$('.filter').forEach((button) => button.addEventListener('click', () => {
+      activeFilter = button.dataset.filter;
+      $$('.filter').forEach((el) => el.setAttribute('aria-pressed', String(el === button)));
+      updateView();
+    }));
+    $$('.group').forEach((button) => button.addEventListener('click', () => {
+      activeGroup = button.dataset.group;
+      $$('.group').forEach((el) => el.classList.toggle('is-active', el === button));
+      updateView();
+    }));
+    $('#topicSearch').addEventListener('input', updateView);
+    $('#clearSearch').addEventListener('click', () => { $('#topicSearch').value = ''; $('#topicSearch').focus(); updateView(); });
+    $('#dateFilter').addEventListener('change', () => { updateView(); toast('日期范围已切换；本样板仅包含 9月22日的固定数据。'); });
+    $('#generate').addEventListener('click', () => toast('这是已生成结果的视觉样板，未连接真实话题生成服务。'));
+    $$('.nav-button').forEach((button) => button.addEventListener('click', () => { if (button.dataset.nav !== '话题整理') toast(button.dataset.nav + ' 尚未接入；本样板仅展示话题整理首页。'); }));
+    $('#addGroup').addEventListener('click', () => toast('添加群组尚未接入；这里展示固定样板群组。'));
+    $('#toggleGroupSearch').addEventListener('click', () => { const open = $('#groupSearch').classList.toggle('is-open'); $('#toggleGroupSearch').setAttribute('aria-expanded', String(open)); if (open) $('#groupSearch').focus(); else { $('#groupSearch').value = ''; $$('.group').forEach(el => el.hidden = false); } });
+    $('#groupSearch').addEventListener('input', (event) => { const value = event.target.value.trim().toLowerCase(); $$('.group').forEach(el => el.hidden = !el.dataset.group.toLowerCase().includes(value)); });
+    $$('.related-card').forEach((button) => button.addEventListener('click', () => { $$('.related-card').forEach(el => el.setAttribute('aria-pressed', String(el === button))); toast('「' + button.dataset.related + '」仅展示相关话题入口，未提供另一份生成结果。'); }));
+  </script>
+</body>
+</html>

@@ -93,6 +93,9 @@ test('topic home visual composition, evidence selection sync, and chat navigatio
       mobile: false
     })
 
+    await home.getByRole('button', { name: '继续探索新话题' }).click()
+    await expect(home.getByRole('searchbox', { name: '话题' })).toBeFocused()
+
     // Verify Defect 1: Uncheck E1, verify summary invalidated; switch to E2, verify E1 remains unchecked
     await home.getByRole('checkbox', { name: '选择候选消息 E1' }).uncheck()
     await expect(home.getByRole('alert')).toContainText('原 AI 结论已失效')
@@ -368,6 +371,10 @@ test('loading state and subscription drawer are usable', async () => {
     const subscriptions = home.getByRole('button', { name: '打开每日订阅管理' })
     await subscriptions.click()
     await expect(page.getByRole('dialog', { name: '每日订阅与运行历史' })).toBeVisible()
+    await expect(page.locator('body > .topic-subscription-drawer-overlay')).toBeVisible()
+    await page.getByRole('button', { name: '关闭订阅管理' }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await subscriptions.click()
     await page.keyboard.press('Escape')
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await expect(subscriptions).toBeFocused()
@@ -386,6 +393,88 @@ test('loading state and subscription drawer are usable', async () => {
     await page.screenshot({ scale: 'css', path: 'test-results/shiyu-home-loading.png' })
     await copyToDocs('test-results/shiyu-home-loading.png', 'shiyu-home-loading.png')
     await expect(home.getByRole('alert')).toContainText('测试超时')
+  } finally {
+    await fixture.close()
+  }
+})
+
+test('long evidence list scrolls without moving the source message', async () => {
+  const fixture = await launchTestApp({ initialPage: 'topics' })
+  try {
+    const { page } = fixture
+    const home = page.getByRole('region', { name: '话题首页' })
+    await fixture.setWindowContentSize({ width: 1280, height: 800 })
+    await home.getByRole('button', { name: '生成话题包' }).click()
+    await expect(home.locator('.topic-evidence-item').first()).toBeVisible()
+    await page.evaluate(() => {
+      const list = document.querySelector('.topic-evidence-items')
+      const first = list?.querySelector('.topic-evidence-item')
+      if (!list || !first) throw new Error('Evidence list fixture is unavailable')
+      for (let index = 0; index < 80; index += 1) list.append(first.cloneNode(true))
+    })
+    const list = home.locator('.topic-evidence-items')
+    await list.scrollIntoViewIfNeeded()
+    const before = await page.evaluate(() => ({
+      pageTop: document.querySelector('.topics-main')?.scrollTop,
+      sourceTop: document.querySelector('.topic-source-card')?.getBoundingClientRect().top,
+      listHeight: document.querySelector('.topic-evidence-items')?.clientHeight,
+      contentHeight: document.querySelector('.topic-evidence-items')?.scrollHeight
+    }))
+    expect(before.contentHeight).toBeGreaterThan(before.listHeight || 0)
+    await list.hover()
+    await page.mouse.wheel(0, 600)
+    await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+    const after = await page.evaluate(() => ({
+      pageTop: document.querySelector('.topics-main')?.scrollTop,
+      sourceTop: document.querySelector('.topic-source-card')?.getBoundingClientRect().top
+    }))
+    expect(after.pageTop).toBe(before.pageTop)
+    expect(after.sourceTop).toBe(before.sourceTop)
+  } finally {
+    await fixture.close()
+  }
+})
+
+test('switching groups restores the topic result and reading position', async () => {
+  const fixture = await launchTestApp({ initialPage: 'topics', topicEvidenceCount: 80 })
+  try {
+    const { page } = fixture
+    await fixture.setWindowContentSize({ width: 1073, height: 668 })
+    const home = page.getByRole('region', { name: '话题首页' })
+    const groups = page.locator('.topics-group-item')
+    await expect(groups).toHaveCount(2)
+    await home.getByRole('button', { name: '生成话题包' }).click()
+    await expect(home.getByRole('checkbox', { name: '选择候选消息 E1', exact: true })).toBeVisible()
+    await home.getByRole('checkbox', { name: '选择候选消息 E1', exact: true }).uncheck()
+    await home.getByRole('button', { name: '查看原文 E2', exact: true }).click()
+    await expect(home.getByRole('complementary', { name: '消息来源摘录' })).toContainText('#2')
+    const evidenceList = home.locator('.topic-evidence-items')
+    await evidenceList.evaluate((element) => {
+      element.scrollTop = 340
+    })
+    const savedEvidenceTop = await evidenceList.evaluate((element) => element.scrollTop)
+    expect(savedEvidenceTop).toBeGreaterThan(0)
+    const main = home
+    await main.evaluate((element) => {
+      element.scrollTop = 110
+    })
+    const savedTop = await main.evaluate((element) => element.scrollTop)
+    expect(savedTop).toBeGreaterThan(0)
+
+    await groups.nth(1).click()
+    await expect(home.getByRole('checkbox', { name: '选择候选消息 E1', exact: true })).toHaveCount(0)
+    await home.getByRole('searchbox', { name: '话题' }).fill('新群话题')
+    await groups.nth(0).click()
+
+    await expect(home.getByRole('searchbox', { name: '话题' })).toHaveValue('craft')
+    await expect(home.getByRole('checkbox', { name: '选择候选消息 E1', exact: true })).not.toBeChecked()
+    await expect(home.getByRole('complementary', { name: '消息来源摘录' })).toContainText('#2')
+    expect(await main.evaluate((element) => element.scrollTop)).toBe(savedTop)
+    expect(
+      await home.locator('.topic-evidence-items').evaluate((element) => element.scrollTop)
+    ).toBe(savedEvidenceTop)
+    await groups.nth(1).click()
+    await expect(home.getByRole('searchbox', { name: '话题' })).toHaveValue('新群话题')
   } finally {
     await fixture.close()
   }

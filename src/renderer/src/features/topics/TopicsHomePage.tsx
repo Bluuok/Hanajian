@@ -13,6 +13,10 @@ import { TopicRelatedStrip } from './components/TopicRelatedStrip'
 import { TopicEmptyState } from './components/TopicEmptyState'
 import { TopicLoadingState } from './components/TopicLoadingState'
 import type { TopicSourceLocator } from '../../../../shared/topic-package'
+import recorderScene from '../../assets/hanajian/hero/topic-recorder-scene.png'
+import booksCorner from '../../assets/hanajian/decor/books-corner.png'
+import starsSvg from '../../assets/decor/stars.svg'
+import paperclipSvg from '../../assets/decor/paperclip.svg'
 import './styles/topics-home.scss'
 
 export interface TopicsHomePageProps {
@@ -32,6 +36,12 @@ export function TopicsHomePage({
 }: TopicsHomePageProps): React.ReactElement {
   const [opening, setOpening] = React.useState(false)
   const [chatError, setChatError] = React.useState('')
+  const topicInputRef = React.useRef<HTMLInputElement>(null)
+  const mainScrollRef = React.useRef<HTMLElement>(null)
+  const groupPositionsRef = React.useRef(
+    new Map<string, { main: number; evidence: number; hadResult: boolean }>()
+  )
+  const pendingPositionGroupRef = React.useRef<string | null>(null)
 
   const state = useTopicsHomeState(contacts)
   const {
@@ -86,11 +96,11 @@ export function TopicsHomePage({
   } = pkgManager
 
   // Sync evidence list ONLY when a new package identity arrives (Defect 1)
-  const lastSyncedPackageKeyRef = React.useRef<string | null>(null)
+  const lastSyncedPackageKeyRef = React.useRef(new Map<string, string>())
   React.useEffect(() => {
     const pkgKey = pkg ? `${pkg.groupId}:${pkg.topicId}:${pkg.createdAt}` : null
-    if (pkg && pkgKey !== lastSyncedPackageKeyRef.current) {
-      lastSyncedPackageKeyRef.current = pkgKey
+    if (pkg && pkg.groupId === groupId && pkgKey !== lastSyncedPackageKeyRef.current.get(groupId)) {
+      lastSyncedPackageKeyRef.current.set(groupId, pkgKey!)
       setEvidence(pkg.evidences)
       setSummaryInvalid(false)
       if (pkg.evidences.length > 0) {
@@ -98,12 +108,21 @@ export function TopicsHomePage({
       } else {
         setSelectedEvidenceId('')
       }
-    } else if (!pkg) {
-      lastSyncedPackageKeyRef.current = null
-      setEvidence([])
-      setSelectedEvidenceId('')
     }
-  }, [pkg, setEvidence, setSummaryInvalid, setSelectedEvidenceId])
+  }, [groupId, pkg, setEvidence, setSummaryInvalid, setSelectedEvidenceId])
+
+  React.useLayoutEffect(() => {
+    if (pendingPositionGroupRef.current !== groupId) return
+    if (pkg && pkg.groupId !== groupId) return
+    const saved = groupPositionsRef.current.get(groupId)
+    if (saved?.hadResult && !pkg) return
+    const main = mainScrollRef.current
+    if (!main) return
+    main.scrollTop = saved?.main ?? 0
+    const evidenceList = main.querySelector<HTMLElement>('.topic-evidence-items')
+    if (evidenceList) evidenceList.scrollTop = saved?.evidence ?? 0
+    pendingPositionGroupRef.current = null
+  }, [groupId, pkg, status])
 
   const openChat = async (): Promise<void> => {
     if (!selectedGroup || opening) return
@@ -118,8 +137,9 @@ export function TopicsHomePage({
     }
   }
 
-  const handleGenerate = async (forceRefresh = false): Promise<void> => {
-    if (!groupId || !topic.trim()) return
+  const handleGenerate = async (forceRefresh = false, topicOverride?: string): Promise<void> => {
+    const nextTopic = (topicOverride ?? topic).trim()
+    if (!groupId || !nextTopic) return
 
     // Date validation (Defect 4)
     const startEpoch = parseTopicDateTime(start)
@@ -136,7 +156,7 @@ export function TopicsHomePage({
 
     const topicQuery: TopicQuery = {
       groupId,
-      topic: topic.trim(),
+      topic: nextTopic,
       aliases: splitList(aliases),
       excludes: splitList(excludes),
       memberIds: splitList(memberIds),
@@ -234,6 +254,17 @@ export function TopicsHomePage({
                 className={`topics-group-item ${isSelected ? 'is-selected' : ''}`}
                 aria-pressed={isSelected}
                 onClick={() => {
+                  if (group.md5 === groupId) return
+                  const main = mainScrollRef.current
+                  if (main && groupId) {
+                    groupPositionsRef.current.set(groupId, {
+                      main: main.scrollTop,
+                      evidence:
+                        main.querySelector<HTMLElement>('.topic-evidence-items')?.scrollTop ?? 0,
+                      hadResult: pkg?.groupId === groupId
+                    })
+                  }
+                  pendingPositionGroupRef.current = group.md5
                   onCancelSource?.()
                   setGroupId(group.md5)
                 }}
@@ -255,20 +286,20 @@ export function TopicsHomePage({
             </p>
           )}
         </div>
+        <img className="topics-groups-books" src={booksCorner} alt="" aria-hidden="true" />
       </aside>
 
       {/* Main Topics Content */}
-      <section className="topics-main" aria-label="话题首页">
-        <TopicHero
-          canOpenChat={Boolean(selectedGroup)}
-          opening={opening}
-          onOpenChat={() => void openChat()}
-          error={chatError}
-        />
-
-        {selectedGroup ? (
-          <>
+      <section ref={mainScrollRef} className="topics-main" aria-label="话题首页">
+        <div
+          className={`topic-intro-stage ${
+            (status === 'success' || status === 'ai_failed') && pkg ? 'has-result' : 'is-pending'
+          }`}
+        >
+          <TopicHero error={chatError} />
+          {selectedGroup && (
             <TopicFilterBar
+              topicInputRef={topicInputRef}
               groupId={selectedGroup.md5}
               topic={topic}
               setTopic={setTopic}
@@ -295,7 +326,28 @@ export function TopicsHomePage({
               active={active}
               onLoadBundle={loadBundle}
             />
+          )}
+          {(status === 'success' || status === 'ai_failed') && pkg && (
+            <TopicSummaryCard
+              pkg={pkg}
+              summaryInvalid={summaryInvalid}
+              selectedCount={evidence.filter((item) => item.selected).length}
+              onLocateEvidence={handleLocateEvidence}
+              onExport={handleExport}
+            />
+          )}
+          <img className="topic-intro-artwork" src={recorderScene} alt="" aria-hidden="true" />
+          <span className="topic-intro-stamp" aria-hidden="true">
+            把讨论
+            <br />
+            轻轻收好
+          </span>
+          <img className="topic-intro-star" src={starsSvg} alt="" aria-hidden="true" />
+          <img className="topic-intro-paperclip" src={paperclipSvg} alt="" aria-hidden="true" />
+        </div>
 
+        {selectedGroup ? (
+          <>
             {status === 'loading' && <TopicLoadingState topic={topic} />}
 
             {status === 'error' && (
@@ -326,14 +378,6 @@ export function TopicsHomePage({
 
             {(status === 'success' || status === 'ai_failed') && pkg && (
               <>
-                <TopicSummaryCard
-                  pkg={pkg}
-                  summaryInvalid={summaryInvalid}
-                  selectedCount={evidence.filter((item) => item.selected).length}
-                  onLocateEvidence={handleLocateEvidence}
-                  onExport={handleExport}
-                />
-
                 <div className="topic-evidence-grid">
                   <TopicEvidenceList
                     evidence={evidence}
@@ -364,9 +408,13 @@ export function TopicsHomePage({
                 <TopicRelatedStrip
                   relatedTopics={pkg.relatedTopics}
                   capabilities={pkg.capabilities}
+                  onExplore={() => {
+                    topicInputRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+                    topicInputRef.current?.focus()
+                  }}
                   onSelectTopic={(newTopic) => {
                     setTopic(newTopic)
-                    void handleGenerate(false)
+                    void handleGenerate(false, newTopic)
                   }}
                 />
               </>
