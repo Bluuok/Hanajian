@@ -128,7 +128,7 @@ test('ASK-03 AI Search result page visual @visual', async () => {
   }
 })
 
-test('ASK-04 AI Search idle page dark visual @visual', async () => {
+test('ASK-04 AI Search idle page legacy dark normalized to light visual @visual', async () => {
   const fixture = await launchTestApp({ now: visualNow, appearanceTheme: 'dark' })
   const pageErrors: Error[] = []
   fixture.page.on('pageerror', (error) => pageErrors.push(error))
@@ -136,13 +136,13 @@ test('ASK-04 AI Search idle page dark visual @visual', async () => {
     await fixture.setWindowContentSize(visualViewport)
     await fixture.page.getByRole('button', { name: '问问微信' }).click()
     await expect(fixture.page.getByRole('heading', { name: '问问你的微信' })).toBeVisible()
-    await expect(fixture.page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await expect(fixture.page.locator('html')).toHaveAttribute('data-theme', 'light')
     expect(
       await fixture.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
     ).toBe(true)
     expect(pageErrors).toEqual([])
     await clearScreenshotFocus(fixture.page)
-    await expect(fixture.page).toHaveScreenshot('ai-search-idle-page-dark.png', {
+    await expect(fixture.page).toHaveScreenshot('ai-search-idle-page.png', {
       animations: 'disabled',
       caret: 'hide'
     })
@@ -151,7 +151,7 @@ test('ASK-04 AI Search idle page dark visual @visual', async () => {
   }
 })
 
-test('ASK-05 AI Search result page dark visual @visual', async () => {
+test('ASK-05 AI Search result page legacy dark normalized to light visual @visual', async () => {
   const fixture = await launchTestApp({ now: visualNow, appearanceTheme: 'dark' })
   const pageErrors: Error[] = []
   fixture.page.on('pageerror', (error) => pageErrors.push(error))
@@ -163,13 +163,13 @@ test('ASK-05 AI Search result page dark visual @visual', async () => {
     await expect(fixture.page.getByText(/固定假回答：测试数据中的核心流程正常/)).toBeVisible({
       timeout: 15_000
     })
-    await expect(fixture.page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await expect(fixture.page.locator('html')).toHaveAttribute('data-theme', 'light')
     expect(
       await fixture.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
     ).toBe(true)
     expect(pageErrors).toEqual([])
     await clearScreenshotFocus(fixture.page)
-    await expect(fixture.page).toHaveScreenshot('ai-search-result-page-dark.png', {
+    await expect(fixture.page).toHaveScreenshot('ai-search-result-page.png', {
       animations: 'disabled',
       caret: 'hide'
     })
@@ -201,7 +201,7 @@ test('API-00 Reader Skill page visual @visual', async () => {
   }
 })
 
-test('API-00 Reader Skill page dark visual @visual', async () => {
+test('API-00 Reader Skill page legacy dark normalized to light visual @visual', async () => {
   const fixture = await launchTestApp({ now: visualNow, appearanceTheme: 'dark' })
   const pageErrors: Error[] = []
   fixture.page.on('pageerror', (error) => pageErrors.push(error))
@@ -210,13 +210,13 @@ test('API-00 Reader Skill page dark visual @visual', async () => {
     await fixture.page.getByRole('button', { name: 'API' }).click()
     await expect(fixture.page.getByRole('heading', { name: 'TraceMemo Reader' })).toBeVisible()
     await expect(fixture.page.getByText('API Token', { exact: true })).toBeVisible()
-    await expect(fixture.page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await expect(fixture.page.locator('html')).toHaveAttribute('data-theme', 'light')
     expect(
       await fixture.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
     ).toBe(true)
     expect(pageErrors).toEqual([])
     await clearScreenshotFocus(fixture.page)
-    await expect(fixture.page).toHaveScreenshot('api-center-page-dark.png', {
+    await expect(fixture.page).toHaveScreenshot('api-center-page.png', {
       animations: 'disabled',
       caret: 'hide'
     })
@@ -284,7 +284,7 @@ test('API-02 Agent target segmented control visual @visual', async () => {
   }
 })
 
-for (const appearanceTheme of ['light', 'dark'] as const) {
+for (const appearanceTheme of ['light'] as const) {
   test(`REPORT-00 report configuration controls ${appearanceTheme} visual @visual`, async () => {
     const fixture = await launchTestApp({ now: visualNow, appearanceTheme })
     const pageErrors: Error[] = []
@@ -340,7 +340,7 @@ for (const appearanceTheme of ['light', 'dark'] as const) {
   })
 }
 
-for (const appearanceTheme of ['light', 'dark'] as const) {
+for (const appearanceTheme of ['light'] as const) {
   test(`REPORT-01 report retry controls ${appearanceTheme} visual @visual`, async () => {
     const fixture = await launchTestApp({
       now: visualNow,
@@ -378,7 +378,7 @@ for (const appearanceTheme of ['light', 'dark'] as const) {
   })
 }
 
-for (const appearanceTheme of ['light', 'dark'] as const) {
+for (const appearanceTheme of ['light'] as const) {
   test(`CHAT-02 personal WeChat send dialog ${appearanceTheme} visual @visual`, async () => {
     test.skip(process.platform !== 'darwin', 'Personal WeChat sending is currently macOS-only')
     const fixture = await launchTestApp({ now: visualNow, appearanceTheme })
@@ -599,7 +599,7 @@ test('SETTINGS-03 database key controls visual @visual', async () => {
   }
 })
 
-for (const appearanceTheme of ['light', 'dark'] as const) {
+for (const appearanceTheme of ['light'] as const) {
   test(`SETTINGS-08 recall protection ${appearanceTheme} visual @visual`, async () => {
     const fixture = await launchTestApp({ now: visualNow, appearanceTheme })
     const pageErrors: Error[] = []
@@ -631,7 +631,7 @@ for (const appearanceTheme of ['light', 'dark'] as const) {
   })
 }
 
-for (const appearanceTheme of ['light', 'dark'] as const) {
+for (const appearanceTheme of ['light'] as const) {
   test(`SETTINGS-04 image decryption controls ${appearanceTheme} visual @visual`, async () => {
     const fixture = await launchTestApp({ now: visualNow, appearanceTheme })
     const pageErrors: Error[] = []
@@ -667,7 +667,7 @@ for (const appearanceTheme of ['light', 'dark'] as const) {
   })
 }
 
-for (const appearanceTheme of ['light', 'dark'] as const) {
+for (const appearanceTheme of ['light'] as const) {
   test(`SETTINGS-05 AI model editor ${appearanceTheme} visual @visual`, async () => {
     const fixture = await launchTestApp({ now: visualNow, appearanceTheme })
     const pageErrors: Error[] = []
@@ -705,7 +705,7 @@ for (const appearanceTheme of ['light', 'dark'] as const) {
   })
 }
 
-for (const appearanceTheme of ['light', 'dark'] as const) {
+for (const appearanceTheme of ['light'] as const) {
   test(`SETTINGS-06 text-to-speech controls ${appearanceTheme} visual @visual`, async () => {
     const fixture = await launchTestApp({ now: visualNow, appearanceTheme })
     const pageErrors: Error[] = []
@@ -740,7 +740,7 @@ for (const appearanceTheme of ['light', 'dark'] as const) {
   })
 }
 
-for (const appearanceTheme of ['light', 'dark'] as const) {
+for (const appearanceTheme of ['light'] as const) {
   test(`SETTINGS-07 voice recognition controls ${appearanceTheme} visual @visual`, async () => {
     const fixture = await launchTestApp({ now: visualNow, appearanceTheme })
     const pageErrors: Error[] = []
@@ -775,7 +775,7 @@ for (const appearanceTheme of ['light', 'dark'] as const) {
   })
 }
 
-for (const appearanceTheme of ['light', 'dark'] as const) {
+for (const appearanceTheme of ['light'] as const) {
   test(`AGENT-01 Agent Hub ${appearanceTheme} visual @visual`, async () => {
     const fixture = await launchTestApp({ now: visualNow, appearanceTheme })
     const pageErrors: Error[] = []
@@ -824,7 +824,7 @@ test('EXPORT-01 export workspace idle visual @visual', async () => {
   }
 })
 
-test('THEME-01 archive page dark visual @visual', async () => {
+test('THEME-01 archive page legacy dark normalized to light visual @visual', async () => {
   const fixture = await launchTestApp({ now: visualNow, appearanceTheme: 'dark' })
   const pageErrors: Error[] = []
   fixture.page.on('pageerror', (error) => pageErrors.push(error))
@@ -832,13 +832,13 @@ test('THEME-01 archive page dark visual @visual', async () => {
     await fixture.setWindowContentSize(visualViewport)
     await fixture.page.getByText('产品测试群', { exact: true }).click()
     await expect(fixture.page.getByText('这是一条脱敏测试消息', { exact: true })).toBeVisible()
-    await expect(fixture.page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await expect(fixture.page.locator('html')).toHaveAttribute('data-theme', 'light')
     expect(
       await fixture.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
     ).toBe(true)
     expect(pageErrors).toEqual([])
     await clearScreenshotFocus(fixture.page)
-    await expect(fixture.page).toHaveScreenshot('archive-page-dark.png', {
+    await expect(fixture.page).toHaveScreenshot('archive-page.png', {
       animations: 'disabled',
       caret: 'hide'
     })
@@ -847,7 +847,7 @@ test('THEME-01 archive page dark visual @visual', async () => {
   }
 })
 
-test('THEME-02 export workspace dark visual @visual', async () => {
+test('THEME-02 export workspace legacy dark normalized to light visual @visual', async () => {
   const fixture = await launchTestApp({ now: visualNow, appearanceTheme: 'dark' })
   const pageErrors: Error[] = []
   fixture.page.on('pageerror', (error) => pageErrors.push(error))
@@ -855,13 +855,13 @@ test('THEME-02 export workspace dark visual @visual', async () => {
     await fixture.setWindowContentSize(visualViewport)
     await fixture.page.getByRole('button', { name: '导出' }).click()
     await expect(fixture.page.getByRole('heading', { name: '导出设置' })).toBeVisible()
-    await expect(fixture.page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await expect(fixture.page.locator('html')).toHaveAttribute('data-theme', 'light')
     expect(
       await fixture.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
     ).toBe(true)
     expect(pageErrors).toEqual([])
     await clearScreenshotFocus(fixture.page)
-    await expect(fixture.page).toHaveScreenshot('export-workspace-dark.png', {
+    await expect(fixture.page).toHaveScreenshot('export-workspace-idle.png', {
       animations: 'disabled',
       caret: 'hide'
     })

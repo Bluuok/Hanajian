@@ -28,3 +28,11 @@
     }
   }
 }
+
+.wechat-system-message-row.archive-jump-message {
+  .wechat-system-message {
+    background: var(--tm-topic-yellow-border, #fae4be);
+    color: var(--tm-topic-yellow-text, #8c6014);
+    font-weight: 600;
+  }
+}

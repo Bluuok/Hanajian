@@ -13,6 +13,7 @@ app.commandLine.appendSwitch('disable-gpu')
 
 const VALID_KEY = 'a'.repeat(64)
 const imageData = `data:image/png;base64,${fs.readFileSync(path.join(root, 'resources/icon.png')).toString('base64')}`
+let imageKeyConfigured = process.env.WXE_E2E_IMAGE_KEY_MISSING !== '1'
 const voiceData = 'UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
 const configuredNow = Number(process.env.WXE_E2E_NOW_MS)
 const updateSimulation = process.env.WXE_E2E_UPDATE_SIMULATION === '1'
@@ -33,6 +34,97 @@ for (const message of allFixtureMessages) {
   message.createTime = (message.createTime || latestFixtureTime) + fixtureTimeOffset
   message.datetime = formatFixtureDateTime(message.createTime)
 }
+
+const fixtureBaseNowSec = Math.floor(fixtureNowMs / 1000)
+const topicFixtureTime =
+  Math.floor((fixtureBaseNowSec + 28800) / 86400) * 86400 - 28800 - 86400 + 15 * 3600
+const regularMessages = fixture.messages['group-regular-md5'] || []
+const additionalRegularMessages = [
+  {
+    id: 'fixture-historical-1',
+    from: 'user',
+    type: '普通文本',
+    datetime: formatFixtureDateTime(fixtureBaseNowSec - 86400 * 30),
+    content: '这是一条远古历史消息',
+    isSender: false,
+    name: '测试成员',
+    senderId: 'wxid_fixture_member',
+    createTime: fixtureBaseNowSec - 86400 * 30,
+    contentData: { type: 'text', content: '这是一条远古历史消息' }
+  },
+  {
+    id: 'fixture-sys-historical',
+    from: 'system',
+    type: '系统消息',
+    datetime: formatFixtureDateTime(fixtureBaseNowSec - 86400 * 10),
+    content: '远古系统消息：群名称已更改',
+    isSender: false,
+    name: '系统',
+    senderId: 'system',
+    createTime: fixtureBaseNowSec - 86400 * 10,
+    contentData: { type: 'text', content: '远古系统消息：群名称已更改' }
+  },
+  {
+    id: 'fixture-dup-1',
+    from: 'user',
+    type: '普通文本',
+    datetime: formatFixtureDateTime(fixtureBaseNowSec - 4000),
+    content: '同秒第 1 条消息',
+    isSender: false,
+    name: '阿杰',
+    senderId: 'wxid_ajie',
+    createTime: fixtureBaseNowSec - 4000,
+    contentData: { type: 'text', content: '同秒第 1 条消息' }
+  },
+  {
+    id: 'fixture-dup-2',
+    from: 'user',
+    type: '普通文本',
+    datetime: formatFixtureDateTime(fixtureBaseNowSec - 4000),
+    content: '同秒第 2 条消息（精准定位目标）',
+    isSender: false,
+    name: '测试成员',
+    senderId: 'wxid_fixture_member',
+    createTime: fixtureBaseNowSec - 4000,
+    contentData: { type: 'text', content: '同秒第 2 条消息（精准定位目标）' }
+  },
+  {
+    id: 'fixture-1',
+    from: 'user',
+    type: '普通文本',
+    datetime: formatFixtureDateTime(topicFixtureTime),
+    content: 'craft 项目原定周五上线，因支付问题改为周六。（真实数据库原文）',
+    isSender: false,
+    name: '测试成员',
+    senderId: 'wxid_fixture_member',
+    createTime: topicFixtureTime,
+    contentData: {
+      type: 'text',
+      content: 'craft 项目原定周五上线，因支付问题改为周六。（真实数据库原文）'
+    }
+  },
+  {
+    id: 'fixture-2',
+    from: 'user',
+    type: '普通文本',
+    datetime: formatFixtureDateTime(topicFixtureTime + 60),
+    content:
+      '我最近在用 Craft，感觉界面很干净，写文档很舒服。页面之间的关联做得不错，适合整理一些长期的知识内容。',
+    isSender: false,
+    name: '阿杰',
+    senderId: 'wxid_ajie',
+    createTime: topicFixtureTime + 60,
+    contentData: {
+      type: 'text',
+      content:
+        '我最近在用 Craft，感觉界面很干净，写文档很舒服。页面之间的关联做得不错，适合整理一些长期的知识内容。'
+    }
+  }
+]
+
+fixture.messages['group-regular-md5'] = [...regularMessages, ...additionalRegularMessages].sort(
+  (a, b) => (a.createTime || 0) - (b.createTime || 0)
+)
 
 const emptyTimings = () => ({
   queryUnderstandingMs: 0,
@@ -210,7 +302,7 @@ let settings = {
   debugEnabled: false,
   autoLogin: connected,
   autoLoginPreferenceSet: true,
-  appearanceTheme: process.env.WXE_E2E_APPEARANCE_THEME === 'dark' ? 'dark' : 'light',
+  appearanceTheme: process.env.WXE_E2E_APPEARANCE_THEME || 'light',
   compactMode: false,
   showStartupProgress: false,
   imageXorKey: '0x40',
@@ -240,9 +332,12 @@ const startupCache = () => ({
   updatedAt: Date.now()
 })
 
-handle('settings:get', () => ({ settings, settingsPath: path.join(userData, 'settings.json') }))
+handle('settings:get', () => ({
+  settings: { ...settings },
+  settingsPath: path.join(userData, 'settings.json')
+}))
 handle('settings:set', (patch) => {
-  settings = { ...settings, ...patch }
+  settings = { ...settings, ...patch, appearanceTheme: 'light' }
   return { settings, settingsPath: path.join(userData, 'settings.json') }
 })
 handle('tts:getSettings', () => ({
@@ -421,14 +516,16 @@ handle('db:getGroupSnapshot', (md5) =>
     : null
 )
 handle('db:getImage', (md5, datName, sessionId, options) =>
-  md5 === 'unsupported'
-    ? { success: false, error: '不支持的 DAT 版本' }
-    : {
-        success: true,
-        data: imageData,
-        isThumb: !options?.force,
-        filePath: path.join(userData, options?.force ? 'original.png' : 'thumbnail.png')
-      }
+  !imageKeyConfigured
+    ? { success: false, error: '未配置图片解密密钥' }
+    : md5 === 'unsupported'
+      ? { success: false, error: '不支持的 DAT 版本' }
+      : {
+          success: true,
+          data: imageData,
+          isThumb: !options?.force,
+          filePath: path.join(userData, options?.force ? 'original.png' : 'thumbnail.png')
+        }
 )
 handle('db:getVoiceData', () => ({ success: true, data: voiceData }))
 const voiceModelStatus = (state = 'missing') => ({
@@ -761,32 +858,409 @@ handle('agent-hub:askLocal', (request) => ({
       }
     : undefined
 }))
+
+let topicSubscriptions = []
+let topicRuns = []
+
+const topicFixturePackage = (query) => {
+  const isAiFailed = process.env.WXE_E2E_TOPIC_AI_FAILED === '1'
+  const isUnavailable = process.env.WXE_E2E_TOPIC_DATA_UNAVAILABLE === '1'
+  const isDependencyError =
+    process.env.WXE_E2E_TOPIC_DEPENDENCY_ERROR === '1' || query.topic === 'error'
+  const isEmpty = process.env.WXE_E2E_TOPIC_EMPTY === '1' || query.topic === 'empty'
+
+  if (isDependencyError) {
+    return {
+      success: false,
+      error: {
+        code: 'DEPENDENCY_FAILED',
+        message: '本地话题生成服务响应超时，请检查服务状态后重试。',
+        retryable: true
+      }
+    }
+  }
+
+  if (isUnavailable) {
+    return {
+      success: false,
+      error: {
+        code: 'DATA_UNAVAILABLE',
+        message: '当前账号无法读取此群聊，请检查数据库连接。',
+        retryable: true
+      }
+    }
+  }
+
+  const timestamp = topicFixtureTime
+
+  if (isEmpty) {
+    const emptyBundle = {
+      id: 'fixture-topic-package-empty',
+      query,
+      groupName: '产品测试群',
+      createdAt: Math.floor(fixtureNowMs / 1000),
+      claims: [],
+      evidence: [],
+      scannedCount: 0,
+      complete: true,
+      warnings: ['指定时间范围内未找到相关消息'],
+      review: 'verified'
+    }
+    return {
+      success: true,
+      bundle: emptyBundle,
+      package: {
+        topicId: emptyBundle.id,
+        topic: query.topic,
+        groupId: query.groupId,
+        groupName: emptyBundle.groupName,
+        createdAt: emptyBundle.createdAt,
+        dateRange: {
+          start: query.startTime,
+          end: query.endTime,
+          timezone: query.timezone,
+          inclusive: true
+        },
+        summary: {
+          title: query.topic,
+          abstract: '',
+          category: undefined,
+          tags: [],
+          evidenceCount: 0,
+          claims: []
+        },
+        evidences: [],
+        relatedTopics: [],
+        capabilities: { relatedTopics: false, categories: false, tags: false },
+        review: emptyBundle.review,
+        scannedCount: 0,
+        complete: true,
+        warnings: emptyBundle.warnings,
+        notices: []
+      },
+      fromCache: false
+    }
+  }
+
+  let bundleEvidence = [
+    {
+      id: 'E1',
+      messageId: 'fixture-1',
+      sender: '测试成员',
+      timestamp,
+      text: 'craft 项目原定周五上线，因支付问题改为周六。',
+      type: '文本',
+      reason: '关键词匹配',
+      selected: true
+    },
+    {
+      id: 'E2',
+      messageId: 'fixture-2',
+      sender: '阿杰',
+      timestamp: timestamp + 60,
+      text: '我最近在用 Craft，感觉界面很干净，写文档很舒服。',
+      type: '文本',
+      reason: '工具体验分享',
+      selected: true
+    }
+  ]
+
+  let packageEvidences = [
+    {
+      id: 'E1',
+      senderId: 'wxid_fixture_member',
+      senderName: '测试成员',
+      sentAt: timestamp,
+      excerpt: 'craft 项目原定周五上线，因支付问题改为周六。',
+      selected: true,
+      reason: '关键词匹配',
+      sourceLocator: { groupId: query.groupId, messageId: 'fixture-1', timestamp }
+    },
+    {
+      id: 'E2',
+      senderId: 'wxid_ajie',
+      senderName: '阿杰',
+      sentAt: timestamp + 60,
+      excerpt: '我最近在用 Craft，感觉界面很干净，写文档很舒服。',
+      selected: true,
+      reason: '工具体验分享',
+      sourceLocator: { groupId: query.groupId, messageId: 'fixture-2', timestamp: timestamp + 60 }
+    }
+  ]
+
+  if (query.topic === 'duplicate') {
+    bundleEvidence = [
+      {
+        id: 'E1',
+        messageId: 'fixture-dup-2',
+        sender: '测试成员',
+        timestamp: fixtureBaseNowSec - 4000,
+        text: '同秒第 2 条消息（精准定位目标）',
+        type: '文本',
+        reason: '同秒消息测试',
+        selected: true
+      }
+    ]
+    packageEvidences = [
+      {
+        id: 'E1',
+        senderId: 'wxid_fixture_member',
+        senderName: '测试成员',
+        sentAt: fixtureBaseNowSec - 4000,
+        excerpt: '同秒第 2 条消息（精准定位目标）',
+        selected: true,
+        reason: '同秒消息测试',
+        sourceLocator: {
+          groupId: query.groupId,
+          messageId: 'fixture-dup-2',
+          timestamp: fixtureBaseNowSec - 4000
+        }
+      }
+    ]
+  } else if (query.topic === 'historical') {
+    bundleEvidence = [
+      {
+        id: 'E1',
+        messageId: 'fixture-historical-1',
+        sender: '测试成员',
+        timestamp: fixtureBaseNowSec - 86400 * 30,
+        text: '这是一条远古历史消息',
+        type: '文本',
+        reason: '远古消息测试',
+        selected: true
+      }
+    ]
+    packageEvidences = [
+      {
+        id: 'E1',
+        senderId: 'wxid_fixture_member',
+        senderName: '测试成员',
+        sentAt: fixtureBaseNowSec - 86400 * 30,
+        excerpt: '这是一条远古历史消息',
+        selected: true,
+        reason: '远古消息测试',
+        sourceLocator: {
+          groupId: query.groupId,
+          messageId: 'fixture-historical-1',
+          timestamp: fixtureBaseNowSec - 86400 * 30
+        }
+      }
+    ]
+  } else if (query.topic === 'missing') {
+    bundleEvidence = [
+      {
+        id: 'E1',
+        messageId: 'missing',
+        sender: '测试成员',
+        timestamp,
+        text: '这条消息在本地数据库已不存在',
+        type: '文本',
+        reason: '缺失消息测试',
+        selected: true
+      }
+    ]
+    packageEvidences = [
+      {
+        id: 'E1',
+        senderId: 'wxid_fixture_member',
+        senderName: '测试成员',
+        sentAt: timestamp,
+        excerpt: '这条消息在本地数据库已不存在',
+        selected: true,
+        reason: '缺失消息测试',
+        sourceLocator: { groupId: query.groupId, messageId: 'missing', timestamp }
+      }
+    ]
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000)
+  const bundle = {
+    id: `fixture-topic-package-${query.topic || 'default'}-${Date.now()}`,
+    query,
+    groupName: '产品测试群',
+    createdAt: nowSeconds,
+    claims: isAiFailed ? [] : [{ kind: '决定', text: '上线推迟到周六。', evidenceIds: ['E1'] }],
+    evidence: bundleEvidence,
+    scannedCount: 12,
+    complete: true,
+    warnings: ['合成测试数据，未读取真实微信'],
+    review: isAiFailed ? 'unavailable' : 'verified'
+  }
+  return {
+    success: true,
+    bundle,
+    package: {
+      topicId: bundle.id,
+      topic: query.topic,
+      groupId: query.groupId,
+      groupName: bundle.groupName,
+      createdAt: bundle.createdAt,
+      dateRange: {
+        start: query.startTime,
+        end: query.endTime,
+        timezone: query.timezone,
+        inclusive: true
+      },
+      summary: {
+        title: query.topic,
+        abstract: isAiFailed ? '' : '上线推迟到周六。',
+        category: undefined,
+        tags: [],
+        evidenceCount: bundleEvidence.length,
+        claims: bundle.claims
+      },
+      evidences: packageEvidences,
+      relatedTopics: [],
+      capabilities: { relatedTopics: false, categories: false, tags: false },
+      review: bundle.review,
+      scannedCount: 12,
+      complete: true,
+      warnings: bundle.warnings,
+      notices: isAiFailed
+        ? [
+            {
+              code: 'AI_FAILED',
+              message: '摘要尚未通过 AI 核对，以下仅为候选原文。',
+              retryable: true
+            }
+          ]
+        : []
+    },
+    fromCache: false
+  }
+}
+
+handle('topic:generatePackage', (request) => topicFixturePackage(request.query))
+handle('topic:locateSource', (locator) => {
+  if (locator.messageId === 'missing') {
+    return {
+      success: false,
+      error: { code: 'SOURCE_NOT_FOUND', message: '本机未找到这条原始消息。', retryable: false }
+    }
+  }
+  if (locator.messageId === 'fixture-dup-2') {
+    return {
+      success: true,
+      message: {
+        id: 'fixture-dup-2',
+        groupId: locator.groupId,
+        senderId: 'wxid_fixture_member',
+        senderName: '测试成员',
+        sentAt: Math.floor(fixtureNowMs / 1000) - 4000,
+        content: '同秒第 2 条消息（精准定位目标）',
+        type: '文本'
+      }
+    }
+  }
+  if (locator.messageId === 'fixture-historical-1') {
+    return {
+      success: true,
+      message: {
+        id: 'fixture-historical-1',
+        groupId: locator.groupId,
+        senderId: 'wxid_fixture_member',
+        senderName: '测试成员',
+        sentAt: Math.floor(fixtureNowMs / 1000) - 86400 * 30,
+        content: '这是一条远古历史消息',
+        type: '文本'
+      }
+    }
+  }
+  if (locator.messageId === 'fixture-sys-historical') {
+    return {
+      success: true,
+      message: {
+        id: 'fixture-sys-historical',
+        groupId: locator.groupId,
+        senderId: 'system',
+        senderName: '系统',
+        sentAt: Math.floor(fixtureNowMs / 1000) - 86400 * 10,
+        content: '远古系统消息：群名称已更改',
+        type: '系统消息'
+      }
+    }
+  }
+  if (locator.messageId === 'fixture-2') {
+    return {
+      success: true,
+      message: {
+        id: 'fixture-2',
+        groupId: locator.groupId,
+        senderId: 'wxid_ajie',
+        senderName: '阿杰',
+        sentAt: locator.timestamp || Math.floor(fixtureNowMs / 1000) - 3540,
+        content:
+          '我最近在用 Craft，感觉界面很干净，写文档很舒服。页面之间的关联做得不错，适合整理一些长期的知识内容。',
+        type: '文本'
+      }
+    }
+  }
+  return {
+    success: true,
+    message: {
+      id: locator.messageId || 'fixture-1',
+      groupId: locator.groupId,
+      senderId: 'wxid_fixture_member',
+      senderName: '测试成员',
+      sentAt: locator.timestamp || Math.floor(fixtureNowMs / 1000) - 3600,
+      content: 'craft 项目原定周五上线，因支付问题改为周六。（真实数据库原文）',
+      type: '文本'
+    }
+  }
+})
 handle('topic:center', () => ({
-  subscriptions: [],
-  runs: [],
+  subscriptions: topicSubscriptions,
+  runs: topicRuns,
   nativeForward: { supported: false, reason: '当前连接器不支持原生合并转发，投递已阻塞。' }
 }))
+handle('topic:saveSubscription', (input) => {
+  const id = input.id || `sub_${Date.now()}`
+  const sub = { ...input, id, createdAt: Math.floor(fixtureNowMs / 1000) }
+  topicSubscriptions = [sub, ...topicSubscriptions.filter((s) => s.id !== id)]
+  return {
+    subscriptions: topicSubscriptions,
+    runs: topicRuns,
+    nativeForward: { supported: false, reason: '当前连接器不支持原生合并转发，投递已阻塞。' }
+  }
+})
+handle('topic:runSubscription', (id) => {
+  topicRuns.push({
+    id: `run_${Date.now()}`,
+    subscriptionId: id,
+    status: 'failed',
+    startedAt: Math.floor(fixtureNowMs / 1000),
+    message: '投递未启用真实微信'
+  })
+  return {
+    subscriptions: topicSubscriptions,
+    runs: topicRuns,
+    nativeForward: { supported: false, reason: '当前连接器不支持原生合并转发，投递已阻塞。' }
+  }
+})
 handle('agent-hub:startLogin', () => ({ status: agentHubStatus() }))
 handle('agent-hub:cancelLogin', () => ({ status: agentHubStatus() }))
 handle('agent-hub:disconnect', () => ({ status: agentHubStatus() }))
 handle('image:getConfig', () => ({
   success: true,
-  configured: true,
-  saved: true,
+  configured: imageKeyConfigured,
+  saved: imageKeyConfigured,
   encryptionAvailable: true,
   source: 'secure-storage',
   resourceRoot: settings.imageKeyRoot,
   xorKey: settings.imageXorKey,
   aesKey: settings.imageAesKey
 }))
-handle('image:saveConfig', (request) => ({
-  success: true,
-  configured: true,
-  saved: true,
-  encryptionAvailable: true,
-  source: 'secure-storage',
-  ...request
-}))
+handle('image:saveConfig', (request) => {
+  imageKeyConfigured = true
+  return {
+    success: true,
+    configured: true,
+    saved: true,
+    encryptionAvailable: true,
+    source: 'secure-storage',
+    ...request
+  }
+})
 handle('image:testConfig', () => ({
   success: true,
   fileFound: true,
@@ -794,7 +1268,10 @@ handle('image:testConfig', () => ({
   readable: true,
   diagnosticLog: 'TraceMemo 图片解析测试日志（已脱敏）\n测试结果：成功（SUCCESS）'
 }))
-handle('image:clearConfig', () => ({ success: true }))
+handle('image:clearConfig', () => {
+  imageKeyConfigured = false
+  return { success: true }
+})
 handle('image:getDecoderStatus', () => ({
   installed: true,
   available: true,
@@ -802,8 +1279,8 @@ handle('image:getDecoderStatus', () => ({
   selected: false
 }))
 handle('image:getStatus', () => ({
-  configured: true,
-  saved: true,
+  configured: imageKeyConfigured,
+  saved: imageKeyConfigured,
   encryptionAvailable: true,
   source: 'secure-storage',
   resourceRoot: settings.imageKeyRoot,

@@ -201,6 +201,7 @@ export function useImageDecryptionController({
     }
     await refresh()
     if (state.autoPhase === 'success') dispatch({ type: 'AUTO_SAVED' })
+    window.dispatchEvent(new Event('wxe:image-key-config-changed'))
     onNotice('图片解密配置已安全保存')
   }, [
     onNotice,
@@ -254,6 +255,7 @@ export function useImageDecryptionController({
       window.api.getImageDecryptionStatus()
     ])
     dispatch({ type: 'CLEAR_DONE', config, status })
+    window.dispatchEvent(new Event('wxe:image-key-config-changed'))
     onNotice('图片密钥已清除，微信原始数据未受影响')
   }, [onNotice])
 

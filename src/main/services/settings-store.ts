@@ -117,7 +117,7 @@ const DEFAULT_SETTINGS: AppSettings = {
       .toLowerCase()
   ),
   autoLoginPreferenceSet: false,
-  appearanceTheme: 'system',
+  appearanceTheme: 'light',
   compactMode: false,
   showStartupProgress: true,
   agentHubCustomInstructions: '',
@@ -164,17 +164,18 @@ export function loadSettings(): AppSettings {
       if (cache.dbRoot) {
         cache.dbRoot = redirectLegacyWeChatFilesToXwechat(cache.dbRoot)
       }
+      cache.appearanceTheme = 'light'
       return cache
     }
   } catch (error) {
     console.warn('[Settings] failed to load, fallback to defaults:', error)
   }
-  cache = { ...DEFAULT_SETTINGS }
+  cache = { ...DEFAULT_SETTINGS, appearanceTheme: 'light' }
   return cache
 }
 
 export function saveSettings(next: AppSettings): AppSettings {
-  cache = { ...next }
+  cache = { ...next, appearanceTheme: 'light' }
   try {
     ensureDir()
     fs.writeJsonSync(SETTINGS_FILE, cache, { spaces: 2 })

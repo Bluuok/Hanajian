@@ -23,6 +23,9 @@ interface ChatWindowProps {
   onOpenTextToSpeechSettings?: () => void
   isAiLoading?: boolean
   jumpToTime?: number | null
+  jumpToMessageId?: string | null
+  isSourceSnapshot?: boolean
+  onReturnToLatest?: () => void
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -39,7 +42,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onCreateGroupReport,
   onOpenTextToSpeechSettings,
   isAiLoading = false,
-  jumpToTime
+  jumpToTime,
+  jumpToMessageId,
+  isSourceSnapshot = false,
+  onReturnToLatest
 }) => {
   const isGroupChat = Boolean(
     contact?.type === 'group' || contact?.m_nsUsrName?.endsWith('@chatroom')
@@ -58,6 +64,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     setIsAtLatest(true)
   }, [])
 
+  const handleJumpToLatest = useCallback((): void => {
+    if (onReturnToLatest) {
+      onReturnToLatest()
+    }
+    scrollToBottom()
+  }, [onReturnToLatest, scrollToBottom])
+
   const handleMessageListScroll = useCallback((event: React.UIEvent<HTMLDivElement>): void => {
     const target = event.currentTarget
     const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight
@@ -75,23 +88,37 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   }, [contact?.md5])
 
   useEffect(() => {
-    if (jumpToTime !== undefined && jumpToTime !== null) setIsAtLatest(false)
-  }, [jumpToTime])
+    if ((jumpToTime !== undefined && jumpToTime !== null) || Boolean(jumpToMessageId)) {
+      setIsAtLatest(false)
+    }
+  }, [jumpToTime, jumpToMessageId])
 
   useEffect(() => {
-    if (!isAtLatest || (jumpToTime !== undefined && jumpToTime !== null)) return
+    if (
+      !isAtLatest ||
+      (jumpToTime !== undefined && jumpToTime !== null) ||
+      Boolean(jumpToMessageId)
+    ) {
+      return
+    }
     const frame = window.requestAnimationFrame(() => scrollToBottom())
     return () => window.cancelAnimationFrame(frame)
-  }, [isAtLatest, jumpToTime, messages, scrollToBottom])
+  }, [isAtLatest, jumpToTime, jumpToMessageId, messages, scrollToBottom])
 
   useEffect(() => {
-    if (!isAtLatest || (jumpToTime !== undefined && jumpToTime !== null)) return
+    if (
+      !isAtLatest ||
+      (jumpToTime !== undefined && jumpToTime !== null) ||
+      Boolean(jumpToMessageId)
+    ) {
+      return
+    }
     const content = messageListRef.current?.querySelector('.virtual-message-list')
     if (!content) return
     const observer = new ResizeObserver(() => scrollToBottom())
     observer.observe(content)
     return () => observer.disconnect()
-  }, [contact?.md5, isAtLatest, jumpToTime, scrollToBottom])
+  }, [contact?.md5, isAtLatest, jumpToTime, jumpToMessageId, scrollToBottom])
 
   const openImagePreview = (imageUrl: string): void => {
     setPreviewImage(imageUrl)
@@ -140,6 +167,25 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         onOpenAiSettings={onCreateGroupReport || (() => undefined)}
       />
       <DataTrustBar messageCount={messages.length} />
+      {isSourceSnapshot && (
+        <div className="source-snapshot-banner" role="status">
+          <div className="source-snapshot-banner-text">
+            <span className="source-snapshot-icon" aria-hidden="true">
+              📌
+            </span>
+            <span>正在查看历史原文</span>
+          </div>
+          {onReturnToLatest && (
+            <button
+              type="button"
+              className="source-snapshot-return-button"
+              onClick={handleJumpToLatest}
+            >
+              返回最新消息
+            </button>
+          )}
+        </div>
+      )}
       <MessageList
         contact={contact}
         messages={filteredMessages}
@@ -154,6 +200,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         onReachTop={onLoadOlderMessages}
         onImageClick={openImagePreview}
         jumpToTime={jumpToTime}
+        jumpToMessageId={jumpToMessageId}
       />
       <ChatStatusBar
         count={filteredMessages.length}
@@ -162,7 +209,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         isReloadingAvatars={isReloadingAvatars}
         onShowAvatarChange={setShowAvatar}
         onReloadAvatars={() => void handleReloadAvatars()}
-        onJumpToLatest={scrollToBottom}
+        onJumpToLatest={handleJumpToLatest}
       />
 
       {sendDialogOpen && (

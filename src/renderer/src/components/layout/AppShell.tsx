@@ -23,6 +23,9 @@ interface AppShellProps {
   onOpenGuide: () => void
   appearanceTheme?: 'system' | 'light' | 'dark'
   compactMode?: boolean
+  imageKeyNotice?: 'missing' | 'error'
+  onOpenImageKeySettings?: () => void
+  onDismissImageKeyNotice?: () => void
   children: React.ReactNode
 }
 
@@ -48,8 +51,10 @@ export function AppShell({
   onPageChange,
   onOpenSettings,
   onOpenGuide,
-  appearanceTheme = 'system',
   compactMode = false,
+  imageKeyNotice,
+  onOpenImageKeySettings,
+  onDismissImageKeyNotice,
   children
 }: AppShellProps): React.ReactElement {
   const [companionVisible, setCompanionVisible] = React.useState(() => {
@@ -68,18 +73,18 @@ export function AppShell({
       /* optional preference */
     }
   }
+
+  // Enforce light theme constant across all app states (white-only policy)
+  const effectiveTheme = 'light'
   React.useEffect(() => {
     document.title = `${APP_BRAND.name} · ${APP_BRAND.englishName}`
-    document.documentElement.dataset.theme = appearanceTheme
-    return () => {
-      delete document.documentElement.dataset.theme
-    }
-  }, [appearanceTheme])
+    document.documentElement.dataset.theme = effectiveTheme
+  }, [])
 
   const activeItem = PRIMARY_NAV_ITEMS.find((item) => item.id === activePage)
 
   return (
-    <div className={`app-shell theme-${appearanceTheme} ${compactMode ? 'is-compact' : ''}`}>
+    <div className={`app-shell theme-${effectiveTheme} ${compactMode ? 'is-compact' : ''}`}>
       <aside className="app-primary-rail">
         <BrandLogo />
         <PrimaryNavigation activePage={activePage} onPageChange={onPageChange} />
@@ -117,6 +122,27 @@ export function AppShell({
       </aside>
       <main className="app-shell-main" aria-label={activeItem?.label || '工作区'}>
         {children}
+        {imageKeyNotice && (
+          <aside className="app-image-key-notice" role="status" aria-label="图片解密提醒">
+            <strong>
+              {imageKeyNotice === 'missing' ? '聊天图片尚未配置密钥' : '暂时无法检查图片密钥'}
+            </strong>
+            <p>
+              {imageKeyNotice === 'missing'
+                ? '聊天记录已连接。查看加密图片还需为当前微信账号配置图片密钥。'
+                : '聊天记录已连接，请到图片解密设置检查当前账号的图片能力。'}
+            </p>
+            <p>在「设置 → 图片解密」按提示自动获取、验证并保存；不支持自动获取时可手动配置。</p>
+            <div className="app-image-key-notice-actions">
+              <button type="button" onClick={onOpenImageKeySettings}>
+                去配置图片
+              </button>
+              <button type="button" onClick={onDismissImageKeyNotice}>
+                稍后
+              </button>
+            </div>
+          </aside>
+        )}
       </main>
     </div>
   )

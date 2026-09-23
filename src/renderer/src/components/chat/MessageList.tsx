@@ -18,6 +18,7 @@ interface MessageListProps {
   onReachTop?: () => Promise<void>
   onImageClick: (imageUrl: string) => void
   jumpToTime?: number | null
+  jumpToMessageId?: string | null
 }
 
 export function MessageList({
@@ -33,7 +34,8 @@ export function MessageList({
   onScroll,
   onReachTop,
   onImageClick,
-  jumpToTime
+  jumpToTime,
+  jumpToMessageId
 }: MessageListProps): React.ReactElement {
   const groups = React.useMemo(() => buildMessageGroups(messages), [messages])
   const groupsRef = React.useRef(groups)
@@ -48,6 +50,15 @@ export function MessageList({
   })
   const virtualItems = virtualizer.getVirtualItems()
   const jumpTarget = React.useMemo(() => {
+    if (jumpToMessageId) {
+      const groupIndex = groups.findIndex((group) =>
+        group.messages.some((message) => message.id === jumpToMessageId)
+      )
+      if (groupIndex >= 0) {
+        return { groupIndex, messageId: jumpToMessageId }
+      }
+      return null
+    }
     if (jumpToTime === undefined || jumpToTime === null) return null
     const groupIndex = groups.findIndex((group) =>
       group.messages.some((message) => (message.createTime || 0) >= jumpToTime)
@@ -55,7 +66,7 @@ export function MessageList({
     if (groupIndex < 0) return null
     const message = groups[groupIndex].messages.find((item) => (item.createTime || 0) >= jumpToTime)
     return { groupIndex, messageId: message?.id }
-  }, [groups, jumpToTime])
+  }, [groups, jumpToMessageId, jumpToTime])
 
   React.useEffect(() => {
     if (!jumpTarget) return
@@ -70,6 +81,7 @@ export function MessageList({
     const scrollElement = event.currentTarget
     if (
       (jumpToTime !== undefined && jumpToTime !== null) ||
+      Boolean(jumpToMessageId) ||
       scrollElement.scrollTop >= 48 ||
       loadingOlderRef.current ||
       isLoadingMessages ||

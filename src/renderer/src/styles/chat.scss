@@ -1513,6 +1513,16 @@
   font-size: 13px;
 }
 
+.image-key-settings-link {
+  border: 0;
+  background: transparent;
+  color: var(--wxex-brand);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  padding: 2px 0;
+}
+
 .image-loading-skeleton {
   width: 110px;
   height: 72px;
@@ -2452,4 +2462,45 @@
 
 .database-account-status {
   text-align: right;
+}
+
+.source-snapshot-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--tm-topic-yellow-surface, #fcf6e8);
+  border-bottom: 1px solid var(--tm-topic-yellow-border, #fae4be);
+  color: var(--tm-topic-yellow-text, #8c6014);
+  font-size: 13px;
+  flex: 0 0 auto;
+
+  .source-snapshot-banner-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+  }
+
+  .source-snapshot-icon {
+    font-size: 14px;
+  }
+
+  .source-snapshot-return-button {
+    padding: 4px 12px;
+    background: #ffffff;
+    border: 1px solid var(--tm-topic-yellow-border, #fae4be);
+    border-radius: 6px;
+    color: var(--wxex-text-primary);
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: var(--wxex-bg-hover);
+      border-color: var(--wxex-border);
+    }
+  }
 }

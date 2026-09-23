@@ -1,3 +1,4 @@
+import { loadTopicSource } from './features/topics/loadTopicSource'
 import React, { useState } from 'react'
 import { AppShell } from './components/layout/AppShell'
 import { SettingsWorkspace } from './features/settings/SettingsWorkspace'
@@ -33,6 +34,7 @@ import {
   sortMessagesChronologically
 } from './utils/message-pages'
 import { enrichQuotedMessages } from './utils/quoted-messages'
+import type { TopicSourceLocator } from '../../shared/topic-package'
 import type { SelectableReportTemplateId } from '../../shared/report-templates'
 import { switchGeneratedReportTemplate } from './utils/report-template-switch'
 import { runtimePlatform } from './utils/runtime-environment'
@@ -240,6 +242,19 @@ function App(): React.ReactElement {
   const [databaseEnvironment, setDatabaseEnvironment] = useState<DatabaseKeyEnvironment>()
   const connectionOperationRef = React.useRef(0)
   const [activePage, setActivePage] = useState<AppPage>('topics')
+  const [sourceSnapshot, setSourceSnapshot] = useState<{
+    groupId: string
+    targetMessageId?: string
+    targetTimestamp?: number
+    messages: Message[]
+  } | null>(null)
+  const sourceNavSeqRef = React.useRef(0)
+  const [imageKeyStatus, setImageKeyStatus] = useState<
+    'checking' | 'configured' | 'missing' | 'error'
+  >('checking')
+  const [imageKeyCheckedFor, setImageKeyCheckedFor] = useState('')
+  const [imageKeyNoticeDismissedFor, setImageKeyNoticeDismissedFor] = useState('')
+  const [imageKeyRevision, setImageKeyRevision] = useState(0)
   const [settingsCategory, setSettingsCategory] = useState<SettingsCategoryId>('account-database')
   const [reportSourceContact, setReportSourceContact] = useState<Contact | null>(null)
   const [reportWorkspaceView, setReportWorkspaceView] = useState<ReportWorkspaceView>('result')
@@ -261,6 +276,32 @@ function App(): React.ReactElement {
   const [reportTextModelOptions, setReportTextModelOptions] = useState<ReportModelChoice[]>([])
   const [reportVisionModelOptions, setReportVisionModelOptions] = useState<ReportModelChoice[]>([])
   const [selfInfo, setSelfInfo] = useState<SelfInfo | null>(null)
+  const imageKeyAccountScope = `${selfInfo?.accountRoot || ''}:${selfInfo?.wxid || ''}`
+
+  React.useEffect(() => {
+    if (!isDatabaseConnected || !selfInfo?.wxid) return
+    let current = true
+    setImageKeyStatus('checking')
+    void window.api.getImageKeyConfig().then(
+      (config) => {
+        if (current) {
+          setImageKeyCheckedFor(imageKeyAccountScope)
+          setImageKeyStatus(
+            config.success ? (config.configured ? 'configured' : 'missing') : 'error'
+          )
+        }
+      },
+      () => {
+        if (current) {
+          setImageKeyCheckedFor(imageKeyAccountScope)
+          setImageKeyStatus('error')
+        }
+      }
+    )
+    return () => {
+      current = false
+    }
+  }, [isDatabaseConnected, imageKeyAccountScope, imageKeyRevision, selfInfo?.wxid])
   const [isNativeMonitorActive, setIsNativeMonitorActive] = useState(false)
   const [exportTasks, setExportTasks] = useState<ExportTaskRecord[]>(() => {
     try {
@@ -303,10 +344,10 @@ function App(): React.ReactElement {
     theme: 'system' | 'light' | 'dark'
     compactMode: boolean
     showStartupProgress: boolean
-  }>({ theme: 'system', compactMode: false, showStartupProgress: true })
+  }>({ theme: 'light', compactMode: false, showStartupProgress: true })
   const handleAppearanceChange = React.useCallback(
     (settings: { theme: 'system' | 'light' | 'dark'; compactMode: boolean }) => {
-      setAppearanceSettings((current) => ({ ...current, ...settings }))
+      setAppearanceSettings((current) => ({ ...current, ...settings, theme: 'light' }))
     },
     []
   )
@@ -335,9 +376,25 @@ function App(): React.ReactElement {
       )
   }, [])
   React.useEffect(() => {
+    const openImageSettings = (): void => {
+      setSettingsCategory('image-key')
+      setActivePage('settings')
+    }
+    const refreshImageKey = (): void => {
+      setImageKeyNoticeDismissedFor('')
+      setImageKeyRevision((current) => current + 1)
+    }
+    window.addEventListener('wxe:open-image-decryption-settings', openImageSettings)
+    window.addEventListener('wxe:image-key-config-changed', refreshImageKey)
+    return () => {
+      window.removeEventListener('wxe:open-image-decryption-settings', openImageSettings)
+      window.removeEventListener('wxe:image-key-config-changed', refreshImageKey)
+    }
+  }, [])
+  React.useEffect(() => {
     void window.api.getSettings().then((result) => {
       setAppearanceSettings({
-        theme: result.settings.appearanceTheme,
+        theme: 'light',
         compactMode: result.settings.compactMode,
         showStartupProgress: result.settings.showStartupProgress
       })
@@ -1109,6 +1166,9 @@ function App(): React.ReactElement {
   }
 
   const handleReturnToLogin = (): void => {
+    connectionOperationRef.current += 1
+    sourceNavSeqRef.current += 1
+    selectedContactMd5Ref.current = ''
     setIsAuthenticated(false)
     setIsDatabaseConnected(false)
     setIsDatabaseConnecting(false)
@@ -1127,10 +1187,14 @@ function App(): React.ReactElement {
     setDbKeyStatus('已断开当前连接，可重新输入或获取数据库密钥')
     setDbKeyStatusKind('normal')
     setStartupProgress(null)
+    setSourceSnapshot(null)
   }
 
   const handleSwitchAccount = async (account: WechatAccountCandidate): Promise<void> => {
     connectionOperationRef.current += 1
+    sourceNavSeqRef.current += 1
+    selectedContactMd5Ref.current = ''
+    setSourceSnapshot(null)
     await window.api.disconnectDb({ closeNative: true })
     setIsAuthenticated(false)
     setIsDatabaseConnected(false)
@@ -1142,6 +1206,7 @@ function App(): React.ReactElement {
     setSelfInfo(null)
     setReportSourceContact(null)
     setExportTasks([])
+    setSourceSnapshot(null)
     messageHistoryRef.current = []
     messagesRef.current = []
     selectedContactMd5Ref.current = ''
@@ -1171,6 +1236,14 @@ function App(): React.ReactElement {
   }
 
   const handleSelectContact = async (contact: Contact, forceLive = false): Promise<void> => {
+    sourceNavSeqRef.current += 1
+    const connection = connectionOperationRef.current
+    if (
+      connection !== connectionOperationRef.current ||
+      selectedContactMd5Ref.current !== contact.md5
+    ) {
+      setSourceSnapshot(null)
+    }
     setSelectedContact(contact)
     selectedContactMd5Ref.current = contact.md5
     currentGroupSnapshotRef.current = null
@@ -1178,7 +1251,11 @@ function App(): React.ReactElement {
     setMessageHistoryStatus('idle')
     const cachedPage = await window.api.getCachedMessagePage(contact.md5)
     const cachedMsgs = cachedPage.messages
-    if (selectedContactMd5Ref.current !== contact.md5) return
+    if (
+      connection !== connectionOperationRef.current ||
+      selectedContactMd5Ref.current !== contact.md5
+    )
+      return
     if (cachedPage.groupSnapshot) {
       storeGroupMemberMeta(contact, cachedPage.groupSnapshot)
     }
@@ -1195,7 +1272,12 @@ function App(): React.ReactElement {
       if (contact.type === 'group' && cachedMsgs.length > 0 && !cachedPage.groupSnapshot) {
         window.setTimeout(() => {
           void loadGroupMemberMeta(contact).then((snapshot) => {
-            if (!snapshot || selectedContactMd5Ref.current !== contact.md5) return
+            if (
+              !snapshot ||
+              connection !== connectionOperationRef.current ||
+              selectedContactMd5Ref.current !== contact.md5
+            )
+              return
             setMessages((current) =>
               applyGroupMemberMeta(
                 contact,
@@ -1213,7 +1295,11 @@ function App(): React.ReactElement {
       const msgs = await window.api.getMessages(contact.md5, undefined, undefined, {
         limit: MESSAGE_PREFETCH_COUNT
       })
-      if (selectedContactMd5Ref.current !== contact.md5) return
+      if (
+        connection !== connectionOperationRef.current ||
+        selectedContactMd5Ref.current !== contact.md5
+      )
+        return
       messageHistoryRef.current = msgs
       const visibleMessages = applyGroupMemberMeta(
         contact,
@@ -1223,7 +1309,11 @@ function App(): React.ReactElement {
       if (contact.type === 'group' && visibleMessages.length > 0) {
         window.setTimeout(() => {
           void loadGroupMemberMeta(contact).then((snapshot) => {
-            if (selectedContactMd5Ref.current !== contact.md5) return
+            if (
+              connection !== connectionOperationRef.current ||
+              selectedContactMd5Ref.current !== contact.md5
+            )
+              return
             if (!snapshot) return
             setMessages((current) =>
               applyGroupMemberMeta(
@@ -1241,8 +1331,29 @@ function App(): React.ReactElement {
       await prefetchPromise
     } finally {
       if (messagePrefetchRef.current === prefetchPromise) messagePrefetchRef.current = null
-      if (selectedContactMd5Ref.current === contact.md5) setIsMessagesLoading(false)
+      if (
+        connection === connectionOperationRef.current &&
+        selectedContactMd5Ref.current === contact.md5
+      )
+        setIsMessagesLoading(false)
     }
+  }
+
+  const handleOpenSource = async (locator: TopicSourceLocator): Promise<void> => {
+    const seq = ++sourceNavSeqRef.current
+    const connection = connectionOperationRef.current
+    const isCurrent = (): boolean =>
+      seq === sourceNavSeqRef.current && connection === connectionOperationRef.current
+    const targetContact = contacts.find((contact) => contact.md5 === locator.groupId)
+    if (!targetContact) throw new Error('未找到对应的群聊，无法定位原始消息。')
+    const snapshot = await loadTopicSource(window.api, locator, isCurrent)
+    if (!snapshot) return
+    setSourceSnapshot({ ...snapshot, groupId: targetContact.md5 })
+    setContentFilter('')
+    setSelectedContact(targetContact)
+    selectedContactMd5Ref.current = targetContact.md5
+    setIsMessagesLoading(false)
+    setActivePage('ask-ai')
   }
 
   React.useEffect(() => {
@@ -1414,6 +1525,7 @@ function App(): React.ReactElement {
     Boolean(contact?.type === 'group' || contact?.m_nsUsrName?.endsWith('@chatroom'))
 
   const handlePageChange = (page: AppPage): void => {
+    sourceNavSeqRef.current += 1
     setActivePage(page)
     if (page === 'ask-ai' && selectedContact && isGroupContact(selectedContact)) {
       void handleSelectContact(selectedContact)
@@ -1429,6 +1541,7 @@ function App(): React.ReactElement {
   }
 
   const openSettings = (): void => {
+    sourceNavSeqRef.current += 1
     setSettingsCategory('account-database')
     setActivePage('settings')
   }
@@ -1775,17 +1888,24 @@ function App(): React.ReactElement {
     switch (activePage) {
       case 'topics':
         return <></>
-      case 'ask-ai':
+      case 'ask-ai': {
+        const activeSnapshot =
+          sourceSnapshot && selectedContact && sourceSnapshot.groupId === selectedContact.md5
+            ? sourceSnapshot
+            : null
         return (
           <AskAIWorkspace
             contacts={contacts}
             selectedContact={selectedContact}
-            messages={messages}
+            messages={activeSnapshot ? activeSnapshot.messages : messages}
             isLoadingMessages={isMessagesLoading}
-            messageHistoryStatus={messageHistoryStatus}
+            messageHistoryStatus={activeSnapshot ? 'idle' : messageHistoryStatus}
             contentFilter={contentFilter}
             onContentFilterChange={setContentFilter}
-            onSelectGroup={handleSelectContact}
+            onSelectGroup={async (contact, forceLive) => {
+              setSourceSnapshot(null)
+              await handleSelectContact(contact, forceLive)
+            }}
             onRefreshGroups={handleRefreshContacts}
             onRefreshData={() => loadContacts()}
             onReloadAvatars={handleReloadCurrentAvatars}
@@ -1793,8 +1913,18 @@ function App(): React.ReactElement {
             onCreateGroupReport={handleOpenReportWorkspace}
             onOpenTextToSpeechSettings={openTextToSpeechSettings}
             isAiReportLoading={reportGeneration.isGenerating}
+            jumpToMessageId={activeSnapshot ? activeSnapshot.targetMessageId : undefined}
+            jumpToTime={activeSnapshot ? activeSnapshot.targetTimestamp : undefined}
+            isSourceSnapshot={Boolean(activeSnapshot)}
+            onReturnToLatest={() => {
+              sourceNavSeqRef.current += 1
+              setSourceSnapshot(null)
+              if (selectedContact) void handleSelectContact(selectedContact, true)
+            }}
+            onOpenSource={handleOpenSource}
           />
         )
+      }
       case 'report':
         return renderReportWorkspace()
       case 'agent-hub':
@@ -1998,6 +2128,21 @@ function App(): React.ReactElement {
       onOpenGuide={openFirstUseGuide}
       appearanceTheme={appearanceSettings.theme}
       compactMode={appearanceSettings.compactMode}
+      imageKeyNotice={
+        isDatabaseConnected &&
+        selfInfo?.wxid &&
+        imageKeyCheckedFor === imageKeyAccountScope &&
+        imageKeyNoticeDismissedFor !== imageKeyAccountScope &&
+        (imageKeyStatus === 'missing' || imageKeyStatus === 'error')
+          ? imageKeyStatus
+          : undefined
+      }
+      onOpenImageKeySettings={() => {
+        setSettingsCategory('image-key')
+        setActivePage('settings')
+        setImageKeyNoticeDismissedFor(imageKeyAccountScope)
+      }}
+      onDismissImageKeyNotice={() => setImageKeyNoticeDismissedFor(imageKeyAccountScope)}
     >
       <AppUpdatePrompt onDownloadStart={openUpdateSettings} onNotice={setReportNotice} />
       {showFirstUseWelcome && (
@@ -2008,11 +2153,17 @@ function App(): React.ReactElement {
         />
       )}
       <TopicsWorkspace
+        key={`${selfInfo?.accountRoot || selectedAccountId || 'none'}:${isDatabaseConnected ? 'connected' : 'disconnected'}`}
         contacts={contacts}
         active={activePage === 'topics'}
         onOpenChat={async (contact) => {
+          setSourceSnapshot(null)
           await handleSelectContact(contact)
           setActivePage('ask-ai')
+        }}
+        onOpenSource={handleOpenSource}
+        onCancelSource={() => {
+          sourceNavSeqRef.current += 1
         }}
       />
       {renderCurrentWorkspace()}

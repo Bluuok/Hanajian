@@ -27,7 +27,7 @@
 
 使用本机稳定消息 ID + 群 ID + Unix 秒定位。优先匹配完整 ID；提供的 ID 找不到时，不退而选同一秒的另一条消息。缺少 ID 时，仅当该群该秒恰好有一条消息才接受时间回退。当前数据模型没有独立的 `clientMsgId` 字段，不声明支持该字段。
 
-数据库读取包含开始和结束端点，精确读取该秒，即使前端没有加载对应历史也可获取原文。最多读取 1001 条；超过 1000 条明确返回 `SOURCE_RANGE_TOO_LARGE`，不把截断结果误报为精确定位。未命中返回 `SOURCE_NOT_FOUND`，多条返回 `SOURCE_AMBIGUOUS`。定位是原始消息卡的数据加载，不等同于已完成聊天历史滚动跳转。
+数据库读取包含开始和结束端点，精确读取该秒，即使前端没有加载对应历史也可获取原文。最多读取 1001 条；超过 1000 条明确返回 `SOURCE_RANGE_TOO_LARGE`，不把截断结果误报为精确定位。未命中返回 `SOURCE_NOT_FOUND`，多条返回 `SOURCE_AMBIGUOUS`。原始消息卡直接消费定位结果；聊天跳转另行读取该秒的真实 Message，要求完整 ID 唯一匹配，不用摘录拼造消息。同秒消息作为独立历史快照显示，目标 ID 滚动高亮；返回最新消息清空快照并重新读取当前群。导航每次 await 后检查账号连接代次和导航序号。
 
 ## 时间
 
@@ -43,4 +43,4 @@
 
 错误包括 `INVALID_INPUT`、`DATA_UNAVAILABLE`、`DEPENDENCY_FAILED`、`AI_FAILED` 及上述定位错误，并带 `message`、`retryable`。空数据作为成功空态区别于错误。数据库账号和群可读性在每次入口检查；外部异常不直接泄露内部路径或凭据。
 
-相关单元测试：`topic-package.test.ts`、`topic-digest.test.ts`、`topic-retrieval-hardening.test.ts`、`topic-center.test.ts`。本轮话题链路 38 项已通过；加上隔离的设置迁移 5 项，共 43 项。验收还需实际 Electron 首页生成、原文读取、证据编辑失效及状态切换检查；纯模拟不能证明真实微信账号集成或真实模型相关性质量。
+相关单元测试：`topic-package.test.ts`、`topic-digest.test.ts`、`topic-retrieval-hardening.test.ts`、`topic-center.test.ts`。本轮话题链路 38 项已通过；加上隔离的设置迁移 5 项，共 43 项。另有原文导航单元 9 项、组件 13 项、Electron 回归 11 项覆盖首页生成、原文定位、高亮、证据编辑失效与状态切换；纯模拟不能证明真实微信账号集成或真实模型相关性质量。

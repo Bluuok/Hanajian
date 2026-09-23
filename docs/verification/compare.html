@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>花笺首页 · 实际页面与参考图对照</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: #fbf9f7; color: #263c52; font: 15px/1.6 system-ui, sans-serif; }
+  header { max-width: 1600px; margin: auto; }
+  h1 { font-size: 24px; margin: 0 0 8px; }
+  p { margin: 0 0 16px; color: #637589; }
+  .controls { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+  select, button { font: inherit; color: inherit; padding: 7px 12px; background: white; border: 1px solid #d6dde4; border-radius: 8px; }
+  main { max-width: 1600px; margin: auto; }
+  .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  figure { min-width: 0; margin: 0 0 20px; padding: 12px; background: white; border: 1px solid #e9e1df; border-radius: 12px; }
+  figcaption { margin: 0 0 10px; font-weight: 600; }
+  img { display: block; width: 100%; height: auto; }
+  a { color: #a05272; }
+  details > summary { cursor: pointer; margin: 12px 0; font-weight: 600; }
+  @media (max-width: 900px) { body { padding: 12px; } .comparison { grid-template-columns: 1fr; } }
+</style>
+<header>
+  <h1>花笺首页 · 页面改造对照</h1>
+  <p>前后截图来自真实 Electron 渲染的合成测试数据。参考图只用于构图与视觉比较；分类、点赞和相关话题等没有可靠来源的内容不照搬。</p>
+  <div class="controls">
+    <label>窗口尺寸 <select id="size"><option value="1073">1073 × 668</option><option value="1280">1280 × 800</option><option value="1440" selected>1440 × 900</option></select></label>
+    <button id="reload" type="button">重新载入截图</button>
+    <a href="README.md">验证记录</a>
+  </div>
+</header>
+<main>
+  <div class="comparison">
+    <figure><figcaption>改造前</figcaption><a id="before-link" href="homepage-before/shiyu-home-1440.png"><img id="before" src="homepage-before/shiyu-home-1440.png" alt="改造前的话题首页"></a></figure>
+    <figure><figcaption>改造后</figcaption><a id="after-link" href="homepage-after/shiyu-home-1440.png"><img id="after" src="homepage-after/shiyu-home-1440.png" alt="改造后的话题首页"></a></figure>
+  </div>
+  <details open><summary>用户提供的参考图</summary><figure><img src="homepage-reference.png" alt="用户提供的暖白、薄荷绿、灰粉色话题首页设计参考"></figure></details>
+</main>
+<script>
+  function refresh() {
+    const size = document.getElementById('size').value;
+    for (const side of ['before', 'after']) {
+      const src = `homepage-${side}/shiyu-home-${size}.png`;
+      document.getElementById(side).src = src + '?v=' + Date.now();
+      document.getElementById(side + '-link').href = src;
+    }
+  }
+  document.getElementById('size').addEventListener('change', refresh);
+  document.getElementById('reload').addEventListener('click', refresh);
+</script>
+</html>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Cluster of delicate falling cherry blossom / pastel petals -->
+  <g opacity="0.88">
+    <!-- Petal 1: Top-left tilted petal -->
+    <path d="M35 15 C45 10, 58 18, 54 32 C50 44, 38 48, 28 42 C20 36, 22 20, 35 15 Z" fill="#F4D2DE" stroke="#E3A8BD" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M35 18 C40 25, 42 34, 40 40" stroke="#E09BB3" stroke-width="0.8" stroke-linecap="round" opacity="0.6" />
+
+    <!-- Petal 2: Middle floating petal -->
+    <path d="M78 30 C90 28, 98 40, 92 52 C86 64, 72 65, 65 56 C58 48, 64 32, 78 30 Z" fill="#FDE8EF" stroke="#E8B4C8" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M78 34 C80 42, 80 50, 76 56" stroke="#E5A6BD" stroke-width="0.8" stroke-linecap="round" opacity="0.5" />
+
+    <!-- Petal 3: Small petal near bottom -->
+    <path d="M42 75 C52 70, 60 78, 58 88 C55 96, 45 100, 38 95 C32 90, 34 78, 42 75 Z" fill="#F8DFE9" stroke="#E2A6BC" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Petal 4: Tiny drifting petal -->
+    <path d="M95 82 C102 80, 108 86, 106 93 C103 98, 96 101, 91 97 C87 94, 88 84, 95 82 Z" fill="#F9E6EE" stroke="#E5B2C5" stroke-width="0.9" stroke-linecap="round" />
+
+    <!-- Small pollen accents -->
+    <circle cx="22" cy="55" r="1.5" fill="#E8B4C8" opacity="0.7" />
+    <circle cx="68" cy="22" r="1.8" fill="#F4C7D7" opacity="0.7" />
+    <circle cx="85" cy="72" r="1.4" fill="#E8B4C8" opacity="0.6" />
+  </g>
+</svg>

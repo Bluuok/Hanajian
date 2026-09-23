@@ -27,7 +27,10 @@ export function MessageGroup({
       <>
         {group.timeLabel && <div className="chat-time-separator">{group.timeLabel}</div>}
         {group.messages.map((message) => (
-          <div key={message.id} className="wechat-system-message-row">
+          <div
+            key={message.id}
+            className={`wechat-system-message-row ${message.id === jumpTargetMessageId ? 'archive-jump-message' : ''}`}
+          >
             <div className="wechat-system-message">{message.content}</div>
           </div>
         ))}

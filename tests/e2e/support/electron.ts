@@ -27,6 +27,10 @@ export async function launchTestApp(
     appearanceTheme?: 'light' | 'dark'
     stableUserData?: string
     initialPage?: 'topics' | 'ask-ai'
+    topicAiFailed?: boolean
+    topicDependencyError?: boolean
+    topicEmpty?: boolean
+    imageKeyMissing?: boolean
   } = {}
 ): Promise<TestApplication> {
   const ownsDirectory = !options.userData || Boolean(options.stableUserData)
@@ -52,6 +56,10 @@ export async function launchTestApp(
       WXE_E2E_LARGE_CONTACTS: String(options.largeContacts || 0),
       WXE_E2E_CORRUPT_CACHE: options.corruptCache ? '1' : '0',
       WXE_E2E_AI_FAILURE: options.aiFailure || '',
+      WXE_E2E_TOPIC_AI_FAILED: options.topicAiFailed ? '1' : '0',
+      WXE_E2E_TOPIC_DEPENDENCY_ERROR: options.topicDependencyError ? '1' : '0',
+      WXE_E2E_TOPIC_EMPTY: options.topicEmpty ? '1' : '0',
+      WXE_E2E_IMAGE_KEY_MISSING: options.imageKeyMissing ? '1' : '0',
       WXE_E2E_UPDATE_SIMULATION: options.updateSimulation ? '1' : '0',
       WXE_E2E_UNSIGNED_MAC_UPDATE: options.unsignedMacUpdate ? '1' : '0',
       WXE_E2E_NOW_MS: options.now ? String(options.now) : '',

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" fill="none">
+  <!-- Delicate botanical eucalyptus/sage leaves sprout -->
+  <g opacity="0.85">
+    <!-- Main stem -->
+    <path d="M50 110 C48 85, 52 50, 42 16" stroke="#90B79E" stroke-width="1.8" stroke-linecap="round" />
+
+    <!-- Leaf 1: Top-right leaf -->
+    <path d="M44 26 C56 22, 68 28, 66 38 C64 48, 50 48, 44 38 Z" fill="#D3E8DC" stroke="#89B499" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M46 34 C54 33, 60 34, 64 36" stroke="#7BA98B" stroke-width="0.8" stroke-linecap="round" opacity="0.6" />
+
+    <!-- Leaf 2: Top-left leaf -->
+    <path d="M44 45 C32 40, 20 46, 22 56 C24 66, 38 64, 45 54 Z" fill="#DDF0E5" stroke="#91BEA1" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M42 52 C34 52, 28 53, 24 55" stroke="#7BA98B" stroke-width="0.8" stroke-linecap="round" opacity="0.6" />
+
+    <!-- Leaf 3: Mid-right leaf -->
+    <path d="M47 65 C60 62, 72 70, 70 80 C68 90, 54 88, 48 76 Z" fill="#CCE3D5" stroke="#84B094" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M50 72 C58 73, 64 76, 68 78" stroke="#7BA98B" stroke-width="0.8" stroke-linecap="round" opacity="0.6" />
+
+    <!-- Leaf 4: Lower-left leaf -->
+    <path d="M48 85 C36 82, 26 90, 28 98 C30 106, 44 104, 49 94 Z" fill="#D5EADA" stroke="#89B499" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Tiny buds -->
+    <circle cx="42" cy="16" r="2.2" fill="#B1D5BE" stroke="#84B094" stroke-width="1" />
+  </g>
+</svg>

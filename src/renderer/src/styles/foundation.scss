@@ -362,6 +362,49 @@ body {
   background: var(--wxex-bg-main);
 }
 
+.app-image-key-notice {
+  position: absolute;
+  z-index: 30;
+  right: 20px;
+  bottom: 20px;
+  width: min(340px, calc(100% - 40px));
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 1px solid var(--wxex-border);
+  border-radius: 12px;
+  background: var(--wxex-bg-elevated);
+  box-shadow: var(--wxex-shadow-popover);
+  color: var(--wxex-text-primary);
+
+  strong {
+    display: block;
+    font-size: 14px;
+  }
+  p {
+    margin: 7px 0;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .app-image-key-notice-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  button {
+    cursor: pointer;
+    border: 1px solid var(--wxex-border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    background: var(--wxex-bg-app);
+    color: inherit;
+  }
+  button:first-child {
+    border-color: var(--wxex-brand);
+    background: var(--wxex-brand);
+    color: white;
+  }
+}
+
 .app-container {
   display: flex;
   width: 100%;

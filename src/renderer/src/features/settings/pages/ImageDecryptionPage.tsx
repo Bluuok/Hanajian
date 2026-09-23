@@ -55,6 +55,20 @@ export function ImageDecryptionPage({
             </div>
           </section>
 
+          <section className="settings-card image-key-setup-guide" aria-label="图片密钥配置步骤">
+            <strong>让聊天图片可查看</strong>
+            <ol>
+              <li>确认当前微信账号已连接，并保持微信运行。</li>
+              <li>在下方点击「开始自动获取」。若当前平台不支持自动获取，可手动输入图片密钥。</li>
+              <li>
+                自动获取会验证候选密钥；手动输入后请选一条含图片的聊天记录测试。验证成功后点击「保存图片密钥」，再返回聊天重试图片。
+              </li>
+            </ol>
+            <p>
+              数据库密钥只负责读取聊天记录；图片密钥需要按当前微信账号单独配置。自动获取目前仅支持页面标明的微信版本和条件。
+            </p>
+          </section>
+
           <h2 className="settings-section-heading">图片解密状态</h2>
           <ImageDecryptStatus
             state={controller.state}

@@ -11,6 +11,10 @@ interface ImageBubbleProps {
   onImageClick?: (imageUrl: string) => void
 }
 
+function needsImageKeySetup(message: string): boolean {
+  return /(?:图片|AES).*密钥.*(?:未配置|不匹配)|未配置.*(?:图片|AES).*密钥/.test(message)
+}
+
 export function ImageBubble({
   imageMd5,
   imageDatName,
@@ -175,6 +179,18 @@ export function ImageBubble({
     return (
       <div className="image-bubble image-error" onClick={() => void loadImage(0)}>
         <div className="image-error-text">{error || '图片未缓存'}</div>
+        {needsImageKeySetup(error) && (
+          <button
+            type="button"
+            className="image-key-settings-link"
+            onClick={(event) => {
+              event.stopPropagation()
+              window.dispatchEvent(new Event('wxe:open-image-decryption-settings'))
+            }}
+          >
+            打开图片解密设置
+          </button>
+        )}
         <div className="image-quality-badge">加载失败</div>
       </div>
     )

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { RadioGroup, RadioGroupItem, Switch } from '../../../components/ui'
+import { Switch } from '../../../components/ui'
 
 export type AppearanceTheme = 'system' | 'light' | 'dark'
 
@@ -10,7 +10,6 @@ export function AppearancePage({
   onNotice: (message: string) => void
   onAppearanceChange: (settings: { theme: AppearanceTheme; compactMode: boolean }) => void
 }): React.ReactElement {
-  const [theme, setTheme] = useState<AppearanceTheme>('system')
   const [compactMode, setCompactMode] = useState(false)
   const [showStartupProgress, setShowStartupProgress] = useState(true)
 
@@ -18,11 +17,10 @@ export function AppearancePage({
     let active = true
     void window.api.getSettings().then((result) => {
       if (!active) return
-      setTheme(result.settings.appearanceTheme)
       setCompactMode(result.settings.compactMode)
       setShowStartupProgress(result.settings.showStartupProgress)
       onAppearanceChange({
-        theme: result.settings.appearanceTheme,
+        theme: 'light',
         compactMode: result.settings.compactMode
       })
     })
@@ -32,16 +30,14 @@ export function AppearancePage({
   }, [onAppearanceChange])
 
   const save = async (patch: {
-    appearanceTheme?: AppearanceTheme
     compactMode?: boolean
     showStartupProgress?: boolean
   }): Promise<void> => {
-    const result = await window.api.setSettings(patch)
-    setTheme(result.settings.appearanceTheme)
+    const result = await window.api.setSettings({ ...patch, appearanceTheme: 'light' })
     setCompactMode(result.settings.compactMode)
     setShowStartupProgress(result.settings.showStartupProgress)
     onAppearanceChange({
-      theme: result.settings.appearanceTheme,
+      theme: 'light',
       compactMode: result.settings.compactMode
     })
     onNotice('外观设置已保存')
@@ -59,38 +55,14 @@ export function AppearancePage({
         <div className="settings-page-content">
           <h2 className="settings-section-heading">显示主题</h2>
           <section className="settings-card settings-option-card">
-            <RadioGroup
-              className="settings-choice-grid"
-              value={theme}
-              onValueChange={(value) => {
-                if (value === 'system' || value === 'light' || value === 'dark')
-                  void save({ appearanceTheme: value })
-              }}
-            >
-              {(
-                [
-                  ['system', '跟随系统', '根据 macOS 或 Windows 外观自动切换'],
-                  ['light', '浅色', '保持当前清爽的浅色工作区'],
-                  ['dark', '深色', '降低夜间浏览时的亮度']
-                ] as const
-              ).map(([value, label, hint]) => (
-                <label
-                  className={`settings-choice ${theme === value ? 'active' : ''}`}
-                  key={value}
-                  htmlFor={`appearance-theme-${value}`}
-                >
-                  <RadioGroupItem
-                    id={`appearance-theme-${value}`}
-                    value={value}
-                    className="mt-0.5"
-                  />
-                  <span>
-                    <b>{label}</b>
-                    <small>{hint}</small>
-                  </span>
-                </label>
-              ))}
-            </RadioGroup>
+            <div className="settings-theme-info p-3">
+              <strong className="block text-sm font-semibold text-[hsl(var(--tm-foreground))]">
+                纯白与暖白浅色主题
+              </strong>
+              <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--tm-muted-foreground))]">
+                花笺统一采用低饱和暖白底色与雾蓝、灰粉的水彩纸质风格，固定为浅色模式以保证视觉层次与文字清晰度。
+              </p>
+            </div>
           </section>
 
           <h2 className="settings-section-heading">工作区行为</h2>

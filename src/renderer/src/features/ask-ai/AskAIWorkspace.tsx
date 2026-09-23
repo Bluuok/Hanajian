@@ -1,5 +1,6 @@
 import React from 'react'
 import type { AgentHubLocalChatMessage } from '../../../../shared/agent-hub'
+import type { TopicSourceLocator } from '../../../../shared/topic-package'
 import type { Contact, Message } from '../../../../shared/types'
 import ChatWindow from '../../components/ChatWindow'
 import { Button, Textarea } from '../../components/ui'
@@ -21,6 +22,11 @@ interface AskAIWorkspaceProps {
   onCreateGroupReport: () => void
   onOpenTextToSpeechSettings: () => void
   isAiReportLoading: boolean
+  jumpToMessageId?: string | null
+  jumpToTime?: number | null
+  isSourceSnapshot?: boolean
+  onReturnToLatest?: () => void
+  onOpenSource?: (locator: TopicSourceLocator) => Promise<void> | void
 }
 
 interface AskMessage extends AgentHubLocalChatMessage {
@@ -143,7 +149,12 @@ export function AskAIWorkspace({
   onLoadOlderMessages,
   onCreateGroupReport,
   onOpenTextToSpeechSettings,
-  isAiReportLoading
+  isAiReportLoading,
+  jumpToMessageId,
+  jumpToTime,
+  isSourceSnapshot,
+  onReturnToLatest,
+  onOpenSource
 }: AskAIWorkspaceProps): React.ReactElement {
   const [query, setQuery] = React.useState('')
   const [question, setQuestion] = React.useState('')
@@ -438,6 +449,10 @@ export function AskAIWorkspace({
           onCreateGroupReport={onCreateGroupReport}
           onOpenTextToSpeechSettings={onOpenTextToSpeechSettings}
           isAiLoading={isAiReportLoading}
+          jumpToMessageId={jumpToMessageId}
+          jumpToTime={jumpToTime}
+          isSourceSnapshot={isSourceSnapshot}
+          onReturnToLatest={onReturnToLatest}
         />
       </section>
 
@@ -466,6 +481,7 @@ export function AskAIWorkspace({
             groupId={selectedGroupId}
             groupName={displayName(selectedGroup)}
             onClose={() => setTopicPanelOpen(false)}
+            onOpenSource={onOpenSource}
           />
         ) : null}
         <header>

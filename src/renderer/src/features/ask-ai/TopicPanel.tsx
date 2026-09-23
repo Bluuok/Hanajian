@@ -7,6 +7,13 @@ import type {
   TopicQuery,
   TopicSubscription
 } from '../../../../shared/topic-digest'
+import {
+  TOPIC_TIMEZONE,
+  formatTopicTime,
+  parseTopicDateTime,
+  previousTopicDay
+} from '../../../../shared/topic-time'
+import type { TopicSourceLocator } from '../../../../shared/topic-package'
 import './TopicPanel.scss'
 
 interface TopicPanelProps {
@@ -15,6 +22,7 @@ interface TopicPanelProps {
   onClose: () => void
   variant?: 'panel' | 'workspace'
   active?: boolean
+  onOpenSource?: (locator: TopicSourceLocator) => Promise<void> | void
 }
 
 const splitList = (value: string): string[] => [
@@ -26,44 +34,27 @@ const splitList = (value: string): string[] => [
   )
 ]
 
-const localDateTime = (date: Date): string => {
-  const offset = date.getTimezoneOffset() * 60_000
-  return new Date(date.getTime() - offset).toISOString().slice(0, 19)
-}
-
-const previousDayRange = (): { start: string; end: string } => {
-  const previous = new Date()
-  previous.setDate(previous.getDate() - 1)
-  previous.setHours(0, 0, 0, 0)
-  const end = new Date(previous)
-  end.setHours(23, 59, 59, 999)
-  return { start: localDateTime(previous), end: localDateTime(end) }
-}
-
-const formatTime = (epochSeconds: number): string =>
-  new Intl.DateTimeFormat('zh-CN', {
-    dateStyle: 'medium',
-    timeStyle: 'medium'
-  }).format(epochSeconds * 1000)
-
 const subscriptionName = (subscription: TopicSubscription): string =>
   `${subscription.query.topic} · ${subscription.query.groupId}`
+
+const formatTime = (epochSeconds: number): string => formatTopicTime(epochSeconds, TOPIC_TIMEZONE)
 
 export function TopicPanel({
   groupId,
   groupName,
   onClose,
   variant = 'panel',
-  active = true
+  active = true,
+  onOpenSource
 }: TopicPanelProps): React.ReactElement {
-  const initialRange = React.useMemo(previousDayRange, [])
+  const initialRange = React.useMemo(previousTopicDay, [])
   const [topic, setTopic] = React.useState('craft')
   const [aliases, setAliases] = React.useState('')
   const [excludes, setExcludes] = React.useState('')
   const [memberIds, setMemberIds] = React.useState('')
   const [start, setStart] = React.useState(initialRange.start)
   const [end, setEnd] = React.useState(initialRange.end)
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  const timezone = TOPIC_TIMEZONE
   const [bundle, setBundle] = React.useState<TopicBundle | null>(null)
   const [evidence, setEvidence] = React.useState<TopicEvidence[]>([])
   const [summaryInvalid, setSummaryInvalid] = React.useState(false)
@@ -109,9 +100,9 @@ export function TopicPanel({
     }
   }, [active])
 
-  const startEpoch = Math.floor(new Date(start).getTime() / 1000)
-  const endEpoch = Math.floor(new Date(end).getTime() / 1000)
-  const resolvedTimezone = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  const startEpoch = parseTopicDateTime(start)
+  const endEpoch = parseTopicDateTime(end)
+  const resolvedTimezone = timezone
 
   const makeQuery = (): TopicQuery => ({
     groupId,
@@ -129,22 +120,31 @@ export function TopicPanel({
       !groupId ||
       !topic.trim() ||
       !Number.isSafeInteger(startEpoch) ||
-      !Number.isSafeInteger(endEpoch)
+      !Number.isSafeInteger(endEpoch) ||
+      startEpoch > endEpoch
     )
       return
     setBusy(true)
     setError('')
     try {
       const topicQuery = makeQuery()
-      const result = await window.api.askAgentHubLocal({
-        question: `整理话题：${topicQuery.topic}`,
-        groupId,
-        groupName,
-        topicQuery
-      })
-      if (!result.success || !result.bundle) throw new Error(result.error || '没有返回话题包')
-      setBundle(result.bundle)
-      setEvidence(result.bundle.evidence)
+      let b: TopicBundle | undefined
+      if (typeof window.api.generateTopicPackage === 'function') {
+        const pkgResult = await window.api.generateTopicPackage({ query: topicQuery })
+        if (!pkgResult.success) throw new Error(pkgResult.error.message || '话题整理失败')
+        b = pkgResult.bundle
+      } else {
+        const result = await window.api.askAgentHubLocal({
+          question: `整理话题：${topicQuery.topic}`,
+          groupId,
+          groupName,
+          topicQuery
+        })
+        if (!result.success || !result.bundle) throw new Error(result.error || '没有返回话题包')
+        b = result.bundle
+      }
+      setBundle(b)
+      setEvidence(b.evidence)
       setSummaryInvalid(false)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '话题整理失败')
@@ -328,7 +328,7 @@ export function TopicPanel({
             </label>
           </div>
           <p className="topic-epoch">
-            时间按本机时区解释，包含开始和结束时刻。仅检索本机可读的聊天记录。
+            时间按北京时间解释，包含开始和结束时刻。仅检索本机可读的聊天记录。
           </p>
           <button
             className="topic-primary"
@@ -402,6 +402,27 @@ export function TopicPanel({
                   <small>
                     {groupName} · 消息 ID：{selectedEvidence.messageId}
                   </small>
+                  {onOpenSource && (
+                    <div className="topic-source-action">
+                      <button
+                        type="button"
+                        className="topic-source-jump-button"
+                        onClick={() =>
+                          void Promise.resolve(
+                            onOpenSource({
+                              groupId,
+                              messageId: selectedEvidence.messageId,
+                              timestamp: selectedEvidence.timestamp
+                            })
+                          ).catch((cause) =>
+                            setError(cause instanceof Error ? cause.message : '定位原始消息失败')
+                          )
+                        }
+                      >
+                        进入聊天查看此群 →
+                      </button>
+                    </div>
+                  )}
                 </aside>
               )}
               <div className="topic-evidence-list">

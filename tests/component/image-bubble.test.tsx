@@ -59,6 +59,21 @@ describe('ImageBubble', () => {
     expect(await screen.findByAltText('图片')).toBeVisible()
   })
 
+  it('opens image decryption settings when the image key is missing', async () => {
+    requestImage.mockRejectedValueOnce(new Error('未配置图片解密密钥'))
+    const open = vi.fn()
+    window.addEventListener('wxe:open-image-decryption-settings', open)
+    try {
+      render(<ImageBubble imageMd5="needs-key" />)
+      expect(await screen.findByText('未配置图片解密密钥')).toBeVisible()
+      await userEvent.click(screen.getByRole('button', { name: '打开图片解密设置' }))
+      expect(open).toHaveBeenCalledOnce()
+      expect(requestImage).toHaveBeenCalledTimes(1)
+    } finally {
+      window.removeEventListener('wxe:open-image-decryption-settings', open)
+    }
+  })
+
   it('places a quoted image on the line below the quoted sender', async () => {
     requestImage.mockResolvedValueOnce({ data: thumbnail, isThumbnail: true })
     const { container } = render(
