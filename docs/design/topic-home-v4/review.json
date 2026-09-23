@@ -23,7 +23,7 @@
       {"part":"related","width":822,"overflow":0}
     ],
     "pageErrors": [],
-    "negativeControl": {"mutation":"empty-art width:1000px","observedWidth":1000,"wouldFailWidthGuard":true}
+    "negativeControl": {"mutation":"empty-art width:1000px","previouslyObservedWidth":1000,"sameGuard":"assert_empty_art_bounds","rejectionAssertionAdded":true,"recheckPending":true}
   },
   "gridCounterexample": "Exact minmax(0,58%) minmax(0,42%) rule did not overflow in this Chromium reproduction; fr proposal is readability, not a confirmed overflow bug.",
   "inspectedScreenshots": ["repro-0.png","repro-1.png","contract-1182-ready.png","contract-1182-idle.png","contract-1073-ready.png"],
