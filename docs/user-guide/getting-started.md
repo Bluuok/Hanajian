@@ -22,7 +22,7 @@
 
 ## 2. 安装并启动
 
-安装包统一从 [GitHub Releases](https://github.com/Bluuok/TraceDigest/releases) 下载。
+安装包统一从 [GitHub Releases](https://github.com/Bluuok/Hanajian/releases) 下载。
 
 ### Windows
 

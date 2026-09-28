@@ -2,7 +2,7 @@
   "name": "tracedigest",
   "version": "0.1.1",
   "packageManager": "pnpm@7.33.7",
-  "description": "花笺 Hanajian（原 TraceDigest）是基于 TraceMemo 二次开发的本地优先微信聊天总结工具，提供只读 Agent 和群聊总结能力。",
+  "description": "花笺 Hanajian 是本地优先的群聊话题整理工具，提供证据追溯与只读 Agent 能力。",
   "keywords": [
     "wechat",
     "wechat chat",
@@ -21,7 +21,7 @@
   "author": "Bluuok",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Bluuok/TraceDigest.git"
+    "url": "https://github.com/Bluuok/Hanajian.git"
   },
   "main": "./out/main/index.js",
   "scripts": {

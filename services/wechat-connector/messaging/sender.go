@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Bluuok/TraceDigest/services/wechat-connector/ilink"
+	"github.com/Bluuok/Hanajian/services/wechat-connector/ilink"
 	"github.com/google/uuid"
 )
 

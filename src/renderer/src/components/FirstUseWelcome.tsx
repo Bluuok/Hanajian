@@ -8,7 +8,7 @@ interface FirstUseWelcomeProps {
 }
 
 const GUIDE_URL =
-  'https://github.com/Bluuok/TraceDigest/blob/main/docs/user-guide/getting-started.md'
+  'https://github.com/Bluuok/Hanajian/blob/main/docs/user-guide/getting-started.md'
 
 export function FirstUseWelcome({
   onDismiss,

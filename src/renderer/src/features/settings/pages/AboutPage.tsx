@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { Button, Progress } from '../../../components/ui'
 import { useAppUpdateState } from '../../app-update/useAppUpdateState'
 
-const REPOSITORY_URL = 'https://github.com/Bluuok/TraceDigest'
+const REPOSITORY_URL = 'https://github.com/Bluuok/Hanajian'
 const RELEASES_URL = `${REPOSITORY_URL}/releases`
 
 function formatDataSize(value?: number): string {

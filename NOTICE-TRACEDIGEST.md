@@ -1,9 +1,7 @@
-# TraceDigest 二次开发与授权说明
+# 花笺代码来源与授权说明
 
-TraceDigest 是基于 TraceMemo（上游仓库：<https://github.com/Wxw-Gu/TraceMemo>）制作的非商业二次开发版本。
+花笺由 Bluuok 独立维护并以新的 Git 仓库发布，但当前代码包含对既有项目的修改，不应理解为全部代码由 Bluuok 从零编写。代码基础来自 [TraceMemo](https://github.com/Wxw-Gu/TraceMemo)，并包含 [gmll-star/TraceDigest](https://github.com/gmll-star/TraceDigest) 的后续改动。GitHub 仓库之间没有 fork 关系，也不代表原作者参与花笺维护或认可花笺。
 
-上游 README 当前声明允许个人使用、学习、修改、二次开发、Fork 以及非商业分享；未经上游维护者书面许可，不得将 TraceMemo 本身或其衍生版本用于商业软件、付费服务、SaaS 或其他直接或间接的商业活动。TraceDigest 遵循并保留这一限制。
+TraceMemo 的项目说明允许个人使用、学习、修改、二次开发和非商业分享，同时限制未经书面许可的商业使用。花笺保留这一使用边界；具体条款以原项目声明为准。
 
-本仓库中的第三方组件继续适用各自的许可证和使用条款。特别是可选的 wechat_chatter 运行时及相关修改适用 GPL-3.0；详见 `docs/third-party/wechat-chatter/NOTICE.md`。
-
-TraceDigest 不属于微信官方项目，也不代表 TraceMemo 上游维护者。使用者必须只处理自己有权访问的数据，并自行承担隐私、数据安全与合规责任。
+仓库内第三方组件继续适用各自的许可证和声明。可选的 wechat_chatter 运行时及相关修改适用 GPL-3.0；详见 `docs/third-party/wechat-chatter/NOTICE.md`。花笺不是微信官方项目。

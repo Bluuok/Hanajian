@@ -16,13 +16,13 @@ npx --yes pnpm@7.33.7 build:win
 
 ## 独立仓库与发布
 
-项目唯一维护仓库为 `Bluuok/TraceDigest`，主分支为 `main`。`origin` 只指向自己的仓库，不配置原作者远程，也不从原仓库拉取更新。首次检出自己的项目时：
+项目唯一维护仓库为 `Bluuok/Hanajian`，主分支为 `main`。`origin` 只指向自己的仓库，不配置原作者远程，也不从原仓库拉取更新。首次检出自己的项目时：
 
 ```powershell
-git clone https://github.com/Bluuok/TraceDigest.git
+git clone https://github.com/Bluuok/Hanajian.git
 cd TraceDigest
 git switch main
-gh repo set-default Bluuok/TraceDigest
+gh repo set-default Bluuok/Hanajian
 ```
 
 发布前运行测试、递增 `package.json` 版本并提交到自己的 `main`，然后创建与版本匹配的 `v<version>` 标签。推送标签后，由本仓库的 `Release Windows` 工作流构建安装包并发布到自己的 GitHub Releases；也可手动上传已验证的安装包和校验和。不要复用旧版本标签。

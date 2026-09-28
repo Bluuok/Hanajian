@@ -1,4 +1,4 @@
-module github.com/Bluuok/TraceDigest/services/wechat-connector
+module github.com/Bluuok/Hanajian/services/wechat-connector
 
 go 1.23.0
 
