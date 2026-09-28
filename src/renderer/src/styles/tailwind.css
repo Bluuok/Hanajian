@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --tm-background: 216 22% 96%;
+    --tm-canvas: 210 25% 98.4%;
+    --tm-foreground: 222 25% 16%;
+    --tm-surface: 0 0% 100%;
+    --tm-surface-muted: 216 20% 94%;
+    --tm-surface-elevated: 0 0% 100%;
+    --tm-border: 215 16% 86%;
+    --tm-border-subtle: 215 18% 92%;
+    --tm-primary: 166 52% 33%;
+    --tm-primary-hover: 166 55% 27%;
+    --tm-primary-foreground: 0 0% 100%;
+    --tm-secondary: 216 20% 94%;
+    --tm-secondary-foreground: 222 25% 16%;
+    --tm-muted: 216 18% 92%;
+    --tm-muted-foreground: 218 10% 42%;
+    --tm-subtle-foreground: 218 9% 57%;
+    --tm-accent: 166 30% 90%;
+    --tm-accent-foreground: 166 52% 28%;
+    --tm-ai: 236.8966 62.3656% 63.5294%;
+    --tm-ai-soft: 236 78.9474% 96.2745%;
+    --tm-success: 157.4194 50.2703% 36.2745%;
+    --tm-warning: 33.5172 57.7689% 49.2157%;
+    --tm-destructive: 0 50% 56.8627%;
+    --tm-destructive-foreground: 0 0% 100%;
+    --tm-focus-ring: 166 52% 33%;
+    --tm-disabled-surface: 216 20% 94%;
+    --tm-disabled-foreground: 218 9% 57%;
+    --tm-disabled-border: 215 18% 92%;
+    --tm-radius-sm: 0.375rem;
+    --tm-radius-md: 0.5rem;
+    --tm-radius-lg: 0.75rem;
+    --tm-radius-xl: 1rem;
+    --tm-shadow-surface: 0 1px 2px rgb(15 23 42 / 0.04);
+    --tm-shadow-floating: 0 8px 24px rgb(15 23 42 / 0.1);
+    --tm-shadow-popover: 0 12px 32px rgb(15 23 42 / 0.14);
+    --tm-shadow-dialog: 0 24px 80px rgb(15 23 42 / 0.2);
+    --tm-motion-fast: 120ms;
+    --tm-motion-normal: 180ms;
+    --tm-motion-slow: 260ms;
+    --tm-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --tm-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+    --tm-control-height-compact: 1.75rem;
+    --tm-control-height-standard: 2rem;
+    --tm-control-height-form: 2.25rem;
+    --tm-z-base: 0;
+    --tm-z-dropdown: 40;
+    --tm-z-popover: 50;
+    --tm-z-toast: 70;
+    --tm-z-modal: 60;
+  }
+
+  [data-theme='dark'] {
+    --tm-background: 222 18% 10%;
+    --tm-canvas: 222 16% 13%;
+    --tm-foreground: 210 20% 94%;
+    --tm-surface: 222 15% 16%;
+    --tm-surface-muted: 222 14% 14.5%;
+    --tm-surface-elevated: 220 13% 18%;
+    --tm-border: 218 12% 27%;
+    --tm-border-subtle: 220 12% 22%;
+    --tm-primary: 164 48% 42%;
+    --tm-primary-hover: 164 50% 49%;
+    --tm-primary-foreground: 0 0% 100%;
+    --tm-secondary: 220 12% 22%;
+    --tm-secondary-foreground: 210 20% 94%;
+    --tm-muted: 220 12% 22%;
+    --tm-muted-foreground: 215 12% 72%;
+    --tm-subtle-foreground: 216 9% 56%;
+    --tm-accent: 164 22% 23%;
+    --tm-accent-foreground: 210 20% 94%;
+    --tm-ai: 236.8966 62.3656% 63.5294%;
+    --tm-ai-soft: 236 24% 20%;
+    --tm-success: 155 51% 55%;
+    --tm-warning: 34 75% 63%;
+    --tm-destructive: 0 65% 66%;
+    --tm-destructive-foreground: 222 18% 10%;
+    --tm-focus-ring: 164 48% 56%;
+    --tm-disabled-surface: 220 12% 18%;
+    --tm-disabled-foreground: 216 9% 56%;
+    --tm-disabled-border: 220 12% 22%;
+    --tm-shadow-surface: 0 1px 2px rgb(0 0 0 / 0.2);
+    --tm-shadow-floating: 0 8px 24px rgb(0 0 0 / 0.28);
+    --tm-shadow-popover: 0 12px 32px rgb(0 0 0 / 0.38);
+    --tm-shadow-dialog: 0 24px 80px rgb(0 0 0 / 0.48);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    [data-theme='system'] {
+      --tm-background: 222 18% 10%;
+      --tm-canvas: 222 16% 13%;
+      --tm-foreground: 210 20% 94%;
+      --tm-surface: 222 15% 16%;
+      --tm-surface-muted: 222 14% 14.5%;
+      --tm-surface-elevated: 220 13% 18%;
+      --tm-border: 218 12% 27%;
+      --tm-border-subtle: 220 12% 22%;
+      --tm-primary: 164 48% 42%;
+      --tm-primary-hover: 164 50% 49%;
+      --tm-primary-foreground: 0 0% 100%;
+      --tm-secondary: 220 12% 22%;
+      --tm-secondary-foreground: 210 20% 94%;
+      --tm-muted: 220 12% 22%;
+      --tm-muted-foreground: 215 12% 72%;
+      --tm-subtle-foreground: 216 9% 56%;
+      --tm-accent: 164 22% 23%;
+      --tm-accent-foreground: 210 20% 94%;
+      --tm-ai: 236.8966 62.3656% 63.5294%;
+      --tm-ai-soft: 236 24% 20%;
+      --tm-success: 155 51% 55%;
+      --tm-warning: 34 75% 63%;
+      --tm-destructive: 0 65% 66%;
+      --tm-destructive-foreground: 222 18% 10%;
+      --tm-focus-ring: 164 48% 56%;
+      --tm-disabled-surface: 220 12% 18%;
+      --tm-disabled-foreground: 216 9% 56%;
+      --tm-disabled-border: 220 12% 22%;
+    }
+  }
+
+  :where(
+    button,
+    input,
+    textarea,
+    select,
+    [role='button'],
+    [role='checkbox'],
+    [role='radio'],
+    [role='switch'],
+    [role='tab']
+  ):focus-visible {
+    outline: 2px solid hsl(var(--tm-focus-ring) / 0.75);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+    }
+  }
+}

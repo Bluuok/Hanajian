@@ -1,0 +1,5 @@
+provider: github
+owner: gmll-star
+repo: TraceDigest
+releaseType: release
+updaterCacheDirName: tracedigest-updater

@@ -1,0 +1,85 @@
+/* 启动自动连接 Splash */
+.boot-splash {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: linear-gradient(180deg, #f5f7f8 0%, #eceff1 100%);
+  z-index: 2000;
+  animation: boot-splash-fade-in 0.2s ease-out;
+}
+
+@keyframes boot-splash-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.boot-splash-spinner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid rgba(7, 193, 96, 0.18);
+  border-top-color: #07c160;
+  animation: boot-splash-spin 0.9s linear infinite;
+}
+
+@keyframes boot-splash-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.boot-splash-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1f2429;
+}
+
+.boot-splash-subtitle {
+  font-size: 12px;
+  color: #6f767c;
+}
+
+.boot-splash-detail {
+  min-height: 18px;
+  font-size: 12px;
+  color: #8a9298;
+}
+
+.boot-splash-progress {
+  width: min(320px, 72vw);
+  height: 6px;
+  margin-top: 2px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(7, 193, 96, 0.12);
+}
+
+.boot-splash-progress-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: #07c160;
+  transition: width 0.18s ease-out;
+}
+
+.app-toast {
+  position: fixed;
+  top: 18px;
+  left: calc(var(--wxex-nav-width) + 50%);
+  z-index: 40;
+  transform: translateX(-50%);
+  padding: 9px 14px;
+  border: 1px solid rgba(198, 134, 53, 0.35);
+  border-radius: var(--wxex-radius-md);
+  background: #fff9ef;
+  color: #7b4b14;
+  font: 13px/18px var(--wxex-font);
+  box-shadow: var(--wxex-shadow-popover);
+}

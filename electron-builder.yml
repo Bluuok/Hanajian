@@ -1,0 +1,74 @@
+appId: io.github.gmll-star.tracedigest
+productName: TraceDigest
+afterPack: scripts/after-pack.cjs
+directories:
+  buildResources: build
+files:
+  - out
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+extraMetadata:
+  main: out/main/index.js
+asarUnpack:
+  - resources/**
+  - node_modules/ffmpeg-static/**
+  - node_modules/silk-wasm/**
+  - node_modules/sherpa-onnx-node/**
+  - node_modules/sherpa-onnx-*/**
+extraResources:
+  # Keep the updater provider in every packaged macOS app. electron-builder also
+  # regenerates this file during publish, using the same release configuration.
+  - from: build/app-update.yml
+    to: app-update.yml
+  # Includes the optional WeChat connector binary for the target platform.
+  - from: resources
+    to: resources
+    filter:
+      - '**/*'
+      - '!connectors/wechat-personal/**'
+  - from: docs/skill/tracememo-reader
+    to: skill/tracememo-reader
+    filter:
+      - '**/*'
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: ${name}-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+mac:
+  icon: icon.icns
+  target:
+    - dmg
+    - zip
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    CFBundleDisplayName: TraceDigest
+    NSCameraUsageDescription: Application requests access to the device's camera.
+    NSMicrophoneUsageDescription: Application requests access to the device's microphone.
+    NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
+    NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  notarize: false
+dmg:
+  artifactName: ${name}-${version}-${arch}.${ext}
+linux:
+  icon: icon.png
+  target:
+    - AppImage
+    - snap
+    - deb
+  maintainer: electronjs.org
+  category: Utility
+appImage:
+  artifactName: ${name}-${version}.${ext}
+npmRebuild: false
+publish:
+  provider: github
+  owner: gmll-star
+  repo: TraceDigest
+  releaseType: release

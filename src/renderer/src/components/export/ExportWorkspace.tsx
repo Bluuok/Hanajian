@@ -1,0 +1,559 @@
+import React, { useMemo, useState } from 'react'
+import type { Message } from '../../../../shared/types'
+import type {
+  ExportContactType,
+  ExportJobProgress,
+  ExportMessageKind,
+  ExportNameMode,
+  ExportRequest,
+  ExportTarget
+} from '../../../../shared/export'
+import { ExportContactPanel } from './ExportContactPanel'
+import { ExportConfigurationPanel } from './ExportConfigurationPanel'
+import { ExportPreviewPanel } from './ExportPreviewPanel'
+import { ExportTaskCenter } from './ExportTaskCenter'
+import type {
+  Contact,
+  ExportFormat,
+  ExportRange,
+  ExportStatus,
+  ExportWorkspaceProps,
+  GroupMemberName
+} from './exportTypes'
+import { displayName } from './exportUtils'
+import type { VoiceModelStatus } from '../../../../shared/voice-recognition'
+import { resolveMemberName } from '../../../../shared/member-names'
+
+const ALL_CONTACT_TYPES: ExportContactType[] = ['group', 'user']
+const contactTypeKey = (types: ExportContactType[] | undefined): string =>
+  [...(types?.length ? types : ALL_CONTACT_TYPES)].sort().join('|')
+
+export function ExportWorkspace({
+  contacts,
+  initialContact,
+  selfInfo,
+  dbReady,
+  loadPreviewMessages,
+  onOpenSettings,
+  exportTasks,
+  onStartExport,
+  onCancelExport
+}: ExportWorkspaceProps): React.ReactElement {
+  const initialSelection = initialContact || contacts[0] || null
+  const runningAllTask = exportTasks.find(
+    (task) => task.scope === 'all' && task.status === 'running'
+  )
+  const initialContactRef = React.useRef<Contact | null>(initialSelection)
+  const previewLoadingRef = React.useRef(new Set<string>())
+  const [contactFilter, setContactFilter] = useState('')
+  const [contactType, setContactType] = useState<'all' | 'group' | 'user'>('all')
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [exportAll, setExportAll] = useState(() => Boolean(runningAllTask))
+  const [allContactTypes, setAllContactTypes] = useState<ExportContactType[]>(() =>
+    runningAllTask?.allContactTypes?.length
+      ? [...runningAllTask.allContactTypes]
+      : [...ALL_CONTACT_TYPES]
+  )
+  const [selectedContacts, setSelectedContacts] = useState<Contact[]>(() =>
+    initialSelection ? [initialSelection] : []
+  )
+  const [activeContactId, setActiveContactId] = useState(initialSelection?.md5 || '')
+  const [previewByContact, setPreviewByContact] = useState<Record<string, Message[]>>({})
+  const [range, setRange] = useState<ExportRange>(() => (runningAllTask ? 'all' : 'today'))
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [selectedKinds, setSelectedKinds] = useState<Set<string>>(() => new Set(['text']))
+  const [nameMode, setNameMode] = useState<ExportNameMode>(
+    initialSelection?.type === 'group' ? 'groupNickname' : 'remark'
+  )
+  const [includeMedia, setIncludeMedia] = useState(true)
+  const [includeVoiceTranscripts, setIncludeVoiceTranscripts] = useState(true)
+  const [voiceModelStatus, setVoiceModelStatus] = useState<VoiceModelStatus | null>(null)
+  const [includeAvatars, setIncludeAvatars] = useState(true)
+  const [preferOriginal, setPreferOriginal] = useState(true)
+  const [fallbackThumbnail, setFallbackThumbnail] = useState(true)
+  const [keepMissing, setKeepMissing] = useState(true)
+  const [format, setFormat] = useState<ExportFormat>(() => runningAllTask?.format || 'csv')
+  const [zip, setZip] = useState(() => runningAllTask?.zip === true)
+  const [fileName, setFileName] = useState('')
+  const [outputDirectory, setOutputDirectory] = useState('')
+  const [status, setStatus] = useState<ExportStatus>('idle')
+  const [jobId, setJobId] = useState('')
+  const [progress, setProgress] = useState<ExportJobProgress | null>(null)
+  const [activeJobOptions, setActiveJobOptions] = useState({
+    includeVoiceTranscripts: false,
+    zip: false
+  })
+  const [taskCenterOpen, setTaskCenterOpen] = useState(false)
+  const selectionLimit = 5
+
+  React.useEffect(() => {
+    if (selectedContacts.length > 0) return
+    const candidate = initialContact || contacts[0]
+    if (!candidate) return
+    initialContactRef.current = candidate
+    setSelectedContacts([candidate])
+    setActiveContactId(candidate.md5)
+  }, [contacts, initialContact, selectedContacts.length])
+
+  React.useEffect(() => {
+    if (exportAll) return
+    for (const contact of selectedContacts) {
+      if (previewByContact[contact.md5] || previewLoadingRef.current.has(contact.md5)) continue
+      previewLoadingRef.current.add(contact.md5)
+      void loadPreviewMessages(contact).then((items) => {
+        previewLoadingRef.current.delete(contact.md5)
+        setPreviewByContact((current) => ({ ...current, [contact.md5]: items }))
+      })
+    }
+  }, [exportAll, loadPreviewMessages, previewByContact, selectedContacts])
+
+  const filteredContacts = useMemo(() => {
+    const keyword = contactFilter.trim().toLowerCase()
+    return contacts.filter((contact) => {
+      if (contactType !== 'all' && contact.type !== contactType) return false
+      if (!keyword) return true
+      return [contact.m_nsNickName, contact.m_nsUsrName].some((value) =>
+        value.toLowerCase().includes(keyword)
+      )
+    })
+  }, [contactFilter, contactType, contacts])
+
+  const activeContact =
+    selectedContacts.find((contact) => contact.md5 === activeContactId) ||
+    selectedContacts[0] ||
+    null
+  const exportContacts = exportAll
+    ? contacts.filter((contact) => allContactTypes.includes(contact.type))
+    : selectedContacts
+  const selectedTargetKey = exportAll
+    ? ''
+    : selectedContacts
+        .map((contact) => contact.md5)
+        .sort()
+        .join('|')
+  const currentTask = exportTasks.find((task) =>
+    exportAll
+      ? task.scope === 'all' &&
+        contactTypeKey(task.allContactTypes) === contactTypeKey(allContactTypes)
+      : task.scope !== 'all' && [...task.targetIds].sort().join('|') === selectedTargetKey
+  )
+  const taskCount = exportTasks.filter((task) => task.status === 'running').length
+  const activeName = displayName(activeContact)
+  const selectedNames = selectedContacts.map(displayName)
+  const allGroupCount = exportContacts.filter((contact) => contact.type === 'group').length
+  const allUserCount = exportContacts.length - allGroupCount
+  const selectedLabel = exportAll
+    ? allContactTypes.length === 2
+      ? `全部群聊 ${allGroupCount.toLocaleString()} 个、联系人 ${allUserCount.toLocaleString()} 个`
+      : allContactTypes[0] === 'group'
+        ? `全部群聊 ${allGroupCount.toLocaleString()} 个`
+        : `全部联系人 ${allUserCount.toLocaleString()} 个`
+    : selectedNames.length > 1
+      ? `${selectedNames.join('、')} · 共 ${selectedNames.length} 个聊天`
+      : selectedNames[0] || '未选择聊天'
+  const preview = exportAll
+    ? []
+    : selectedContacts
+        .flatMap((contact) =>
+          (previewByContact[contact.md5] || []).map((message) => ({
+            ...message,
+            exportConversationId: contact.md5,
+            exportConversationName: displayName(contact),
+            exportConversationAvatarUrl: contact.avatar
+          }))
+        )
+        .sort((left, right) => Number(left.createTime || 0) - Number(right.createTime || 0))
+        .slice(-20)
+  const previewMediaCount = preview.filter(
+    (message) =>
+      ['image', 'video', 'voice', 'sticker'].includes(message.contentData?.type || '') ||
+      (message.contentData?.type === 'share' && message.contentData.typeVal === '6')
+  ).length
+  const previewBytes = preview.reduce(
+    (total, message) => total + (message.content?.length || 0) * 2 + (message.img ? 1024 : 0),
+    0
+  )
+  const defaultOutputName = exportAll
+    ? '全部聊天记录'
+    : selectedContacts.length > 1
+      ? `${selectedNames[0]}等${selectedContacts.length}个聊天_合并档案`
+      : `${activeName}_聊天档案`
+  const outputName = fileName.trim() || defaultOutputName
+  const nameOptions: { value: ExportNameMode; label: string }[] = exportContacts.some(
+    (contact) => contact.type === 'group'
+  )
+    ? [
+        { value: 'groupNickname', label: '群昵称' },
+        { value: 'remark', label: '备注' },
+        { value: 'wechatNickname', label: '微信名' }
+      ]
+    : [
+        { value: 'remark', label: '备注' },
+        { value: 'wechatNickname', label: '微信名' }
+      ]
+
+  const previewName = (message: Message): string =>
+    message.name ||
+    (message.isSender ? selfInfo?.nickname : undefined) ||
+    (message.isSender ? '我' : '联系人')
+  const previewAvatar = (message: Message): string | undefined =>
+    message.img || (message.isSender ? selfInfo?.avatar : undefined)
+  const previewItems = preview.map((message) => ({
+    ...message,
+    name: previewName(message),
+    img: previewAvatar(message)
+  }))
+
+  const handleSelectContact = (contact: Contact): void => {
+    if (exportAll) {
+      setExportAll(false)
+      setRange('today')
+    }
+    if (!selectionMode) {
+      setSelectedContacts([contact])
+      setActiveContactId(contact.md5)
+      setStatus('idle')
+      return
+    }
+    const selected = selectedContacts.some((item) => item.md5 === contact.md5)
+    if (selected) {
+      if (selectedContacts.length === 1) return
+      const next = selectedContacts.filter((item) => item.md5 !== contact.md5)
+      setSelectedContacts(next)
+      if (activeContactId === contact.md5) setActiveContactId(next[0].md5)
+      setStatus('idle')
+      return
+    }
+    if (selectedContacts.length >= selectionLimit) return
+    const next = [...selectedContacts, contact]
+    setSelectedContacts(next)
+    setActiveContactId(contact.md5)
+    setFormat('html')
+    setStatus('idle')
+  }
+
+  const handleExportAll = (): void => {
+    if (!contacts.length || status === 'running') return
+    setExportAll(true)
+    setAllContactTypes([...ALL_CONTACT_TYPES])
+    setSelectionMode(false)
+    setRange('all')
+    setStatus('idle')
+  }
+
+  const toggleAllContactType = (type: ExportContactType): void => {
+    if (status === 'running') return
+    setAllContactTypes((current) => {
+      if (current.includes(type)) {
+        return current.length === 1 ? current : current.filter((item) => item !== type)
+      }
+      return ALL_CONTACT_TYPES.filter((item) => item === type || current.includes(item))
+    })
+    setStatus('idle')
+  }
+
+  React.useEffect(() => {
+    let active = true
+    void window.api
+      .getVoiceModelStatus()
+      .then((next) => active && setVoiceModelStatus(next))
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const toggleKind = (value: string): void => {
+    setSelectedKinds((current) => {
+      const next = new Set(current)
+      if (next.has(value)) next.delete(value)
+      else next.add(value)
+      return next
+    })
+  }
+
+  const handleStart = async (): Promise<void> => {
+    if (!activeContact || exportContacts.length === 0 || status === 'running') return
+    // Runs only from the export button event; a fresh id is required for each job.
+    const nextJobId = `export-${Date.now()}`
+    const exportFormat = !exportAll && exportContacts.length > 1 ? 'html' : format
+    const shouldZip = exportFormat === 'html' && zip
+    const shouldIncludeVoiceTranscripts =
+      includeVoiceTranscripts &&
+      includeMedia &&
+      exportFormat === 'html' &&
+      selectedKinds.has('voice') &&
+      voiceModelStatus?.state === 'ready'
+    setJobId(nextJobId)
+    setProgress(null)
+    setActiveJobOptions({ includeVoiceTranscripts: shouldIncludeVoiceTranscripts, zip: shouldZip })
+    setStatus('running')
+    const targets: ExportTarget[] = await Promise.all(
+      exportContacts.map(async (contact) => {
+        const nameMap: Record<string, string> = {}
+        const avatarUrls: Record<string, string> = {}
+        if (contact.type === 'group') {
+          if (!exportAll) {
+            const snapshot = await window.api.getGroupSnapshot(contact.md5)
+            for (const member of (snapshot?.members || []) as GroupMemberName[]) {
+              nameMap[member.wxid] = resolveMemberName(member, nameMode)
+              if (member.avatar) avatarUrls[member.wxid] = member.avatar
+            }
+          }
+        } else if (!exportAll) {
+          nameMap[contact.m_nsUsrName] =
+            nameMode === 'remark'
+              ? contact.remark || contact.m_nsNickName || contact.m_nsUsrName
+              : contact.wechatNickname || contact.m_nsUsrName
+          if (contact.avatar) avatarUrls[contact.m_nsUsrName] = contact.avatar
+        }
+        if (selfInfo?.wxid && (!exportAll || contact.type === 'group')) {
+          nameMap[selfInfo.wxid] = selfInfo.nickname || selfInfo.wxid
+          if (selfInfo.avatar) avatarUrls[selfInfo.wxid] = selfInfo.avatar
+        }
+        return {
+          userMd5: contact.md5,
+          name: displayName(contact),
+          type: contact.type,
+          avatarUrl: contact.avatar,
+          nameMode,
+          nameMap,
+          avatarUrls
+        }
+      })
+    )
+    const now = new Date()
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+    const days = range === 'today' ? 1 : range === 'threeDays' ? 3 : range === 'sevenDays' ? 7 : 0
+    const startOfRange = days
+      ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - days + 1)
+      : null
+    const request: ExportRequest = {
+      jobId: nextJobId,
+      scope: exportAll ? 'all' : 'selected',
+      allContactTypes: exportAll ? allContactTypes : undefined,
+      targets,
+      format: exportFormat,
+      outputName,
+      outputDirectory: outputDirectory || undefined,
+      startTime: exportAll
+        ? undefined
+        : startOfRange
+          ? Math.floor(startOfRange.getTime() / 1000)
+          : range === 'custom' && startDate
+            ? Math.floor(new Date(startDate).getTime() / 1000)
+            : undefined,
+      endTime: exportAll
+        ? undefined
+        : startOfRange
+          ? Math.floor(endOfToday.getTime() / 1000)
+          : range === 'custom' && endDate
+            ? Math.floor(new Date(endDate).getTime() / 1000)
+            : undefined,
+      kinds: Array.from(selectedKinds) as ExportMessageKind[],
+      includeMedia,
+      includeVoiceTranscripts: shouldIncludeVoiceTranscripts,
+      preferOriginal,
+      fallbackThumbnail,
+      keepMissing,
+      includeAvatars,
+      zip: shouldZip
+    }
+    const result = await onStartExport(request)
+    if (result.success) {
+      setProgress((current) => ({
+        ...(current || { jobId: nextJobId, processed: result.messageCount || 0 }),
+        phase: 'completed',
+        processed: result.messageCount ?? current?.processed ?? 0,
+        total: result.messageCount ?? current?.total,
+        percent: 100,
+        outputPath: result.outputPath
+      }))
+      setStatus('completed')
+    } else if (result.error !== '已取消') {
+      setStatus('idle')
+    }
+  }
+
+  React.useEffect(
+    () =>
+      window.api.onExportProgress((next) => {
+        if (next.jobId !== jobId) return
+        setProgress(next)
+        if (next.phase === 'completed') setStatus('completed')
+        if (next.phase === 'cancelled' || next.phase === 'failed') setStatus('idle')
+      }),
+    [jobId]
+  )
+
+  React.useEffect(() => {
+    if (!currentTask) return
+    setJobId(currentTask.jobId)
+    setProgress(currentTask.progress)
+    setActiveJobOptions({
+      includeVoiceTranscripts: currentTask.includeVoiceTranscripts === true,
+      zip: currentTask.zip === true
+    })
+    setFormat(currentTask.format)
+    setZip(currentTask.zip === true)
+    setStatus(
+      currentTask.status === 'running'
+        ? 'running'
+        : currentTask.status === 'completed'
+          ? 'completed'
+          : 'idle'
+    )
+  }, [currentTask])
+
+  const resetDefaults = (): void => {
+    const contact = initialContactRef.current || contacts[0] || null
+    setSelectedContacts(contact ? [contact] : [])
+    setActiveContactId(contact?.md5 || '')
+    setSelectionMode(false)
+    setExportAll(false)
+    setAllContactTypes([...ALL_CONTACT_TYPES])
+    setRange('today')
+    setStartDate('')
+    setEndDate('')
+    setSelectedKinds(new Set(['text']))
+    setNameMode(contact?.type === 'group' ? 'groupNickname' : 'remark')
+    setIncludeMedia(true)
+    setIncludeAvatars(true)
+    setPreferOriginal(true)
+    setFallbackThumbnail(true)
+    setKeepMissing(true)
+    setFormat('csv')
+    setZip(false)
+    setFileName('')
+    setStatus('idle')
+    setJobId('')
+    setProgress(null)
+    setActiveJobOptions({ includeVoiceTranscripts: false, zip: false })
+  }
+
+  const targetPath = exportAll
+    ? format === 'html' && zip
+      ? `文稿/TraceMemo/导出/${outputName}.zip`
+      : `文稿/TraceMemo/导出/${outputName}/`
+    : format === 'html'
+      ? zip
+        ? `文稿/TraceMemo/导出/${outputName}.zip`
+        : `文稿/TraceMemo/导出/${outputName}/`
+      : `文稿/TraceMemo/导出/${outputName}.${format === 'markdown' ? 'md' : format}`
+
+  const selectedTargetPath = outputDirectory
+    ? `${outputDirectory}/${outputName}${format === 'html' ? (zip ? '.zip' : '/') : `.${format === 'markdown' ? 'md' : format}`}`
+    : targetPath
+
+  const selectOutputDirectory = (): void => {
+    void window.api.selectExportDirectory().then((result) => {
+      if (!result.canceled && result.path) setOutputDirectory(result.path)
+    })
+  }
+
+  return (
+    <div className="export-workspace">
+      <ExportContactPanel
+        contacts={contacts}
+        filteredContacts={filteredContacts}
+        activeContact={activeContact}
+        selectedContactIds={selectedContacts.map((contact) => contact.md5)}
+        selectionMode={selectionMode}
+        exportAll={exportAll}
+        allContactTypes={allContactTypes}
+        exportRunning={status === 'running'}
+        selectionLimit={selectionLimit}
+        selfInfo={selfInfo}
+        dbReady={dbReady}
+        contactFilter={contactFilter}
+        contactType={contactType}
+        onContactFilterChange={setContactFilter}
+        onContactTypeChange={setContactType}
+        onSelectContact={handleSelectContact}
+        onCompleteSelection={() => setSelectionMode(false)}
+        onExportAll={handleExportAll}
+        onToggleAllContactType={toggleAllContactType}
+        onOpenSettings={onOpenSettings}
+      />
+
+      <ExportConfigurationPanel
+        taskCenter={
+          <ExportTaskCenter
+            open={taskCenterOpen}
+            taskCount={taskCount}
+            tasks={exportTasks}
+            onToggle={() => setTaskCenterOpen((open) => !open)}
+            onCancel={(taskJobId) => void onCancelExport(taskJobId)}
+          />
+        }
+        selectedContacts={selectedContacts}
+        exportAll={exportAll}
+        allContactTypes={allContactTypes}
+        selectedLabel={selectedLabel}
+        selectionMode={selectionMode}
+        exportContactCount={exportContacts.length}
+        format={format}
+        range={range}
+        startDate={startDate}
+        endDate={endDate}
+        selectedKinds={selectedKinds}
+        nameOptions={nameOptions}
+        nameMode={nameMode}
+        includeMedia={includeMedia}
+        includeVoiceTranscripts={includeVoiceTranscripts}
+        includeAvatars={includeAvatars}
+        preferOriginal={preferOriginal}
+        fallbackThumbnail={fallbackThumbnail}
+        keepMissing={keepMissing}
+        voiceModelStatus={voiceModelStatus}
+        zip={zip}
+        fileName={fileName}
+        defaultOutputName={defaultOutputName}
+        selectedTargetPath={selectedTargetPath}
+        status={status}
+        canStart={Boolean(activeContact && exportContacts.length && status !== 'running')}
+        onToggleSelectionMode={() => {
+          setExportAll(false)
+          setSelectionMode((current) => !current)
+        }}
+        onFormatChange={setFormat}
+        onZipChange={setZip}
+        onRangeChange={setRange}
+        onStartDateChange={setStartDate}
+        onEndDateChange={setEndDate}
+        onToggleKind={toggleKind}
+        onNameModeChange={setNameMode}
+        onIncludeMediaChange={setIncludeMedia}
+        onIncludeVoiceTranscriptsChange={setIncludeVoiceTranscripts}
+        onIncludeAvatarsChange={setIncludeAvatars}
+        onPreferOriginalChange={setPreferOriginal}
+        onFallbackThumbnailChange={setFallbackThumbnail}
+        onKeepMissingChange={setKeepMissing}
+        onFileNameChange={setFileName}
+        onSelectOutputDirectory={selectOutputDirectory}
+        onReset={resetDefaults}
+        onStart={() => void handleStart()}
+      />
+
+      <ExportPreviewPanel
+        status={status}
+        previewItems={previewItems}
+        previewMediaCount={previewMediaCount}
+        previewBytes={previewBytes}
+        selfInfo={selfInfo}
+        progress={progress}
+        includeVoiceTranscripts={activeJobOptions.includeVoiceTranscripts}
+        zip={activeJobOptions.zip}
+        selectedCount={exportContacts.length}
+        allExport={exportAll}
+        jobId={jobId}
+        onCancel={(exportJobId) => {
+          void window.api.cancelExport(exportJobId)
+          setStatus('idle')
+        }}
+        onReveal={(path) => void window.api.revealExport(path)}
+      />
+    </div>
+  )
+}

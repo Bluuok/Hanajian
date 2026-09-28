@@ -1,0 +1,88 @@
+name: Release Windows
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-windows:
+    name: Build and publish Windows installer
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 7.33.7
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/wechat-connector/go.mod
+          cache-dependency-path: services/wechat-connector/go.sum
+
+      - name: Verify tag matches package version
+        shell: pwsh
+        run: |
+          $packageVersion = (Get-Content package.json | ConvertFrom-Json).version
+          $expectedTag = "v$packageVersion"
+          if ($env:GITHUB_REF_NAME -ne $expectedTag) {
+            throw "Release tag $env:GITHUB_REF_NAME does not match package version $packageVersion. Expected $expectedTag."
+          }
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Windows installer
+        run: pnpm build:win
+
+      - name: Generate SHA256 checksum
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path 'dist/TraceDigest-*-setup.exe' | Select-Object -First 1
+          if (-not $installer) {
+            throw 'Windows installer was not generated.'
+          }
+          $hash = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($installer.Name)" | Set-Content -LiteralPath 'dist/SHA256SUMS.txt' -Encoding ascii
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TraceDigest-${{ github.ref_name }}-windows-x64
+          path: |
+            dist/TraceDigest-*-setup.exe
+            dist/TraceDigest-*-setup.exe.blockmap
+            dist/latest.yml
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $assets = @(
+            (Get-ChildItem -Path 'dist/TraceDigest-*-setup.exe').FullName
+            (Get-ChildItem -Path 'dist/TraceDigest-*-setup.exe.blockmap').FullName
+            (Resolve-Path -LiteralPath 'dist/latest.yml').Path
+            (Resolve-Path -LiteralPath 'dist/SHA256SUMS.txt').Path
+          )
+          gh release create $env:GITHUB_REF_NAME $assets `
+            --verify-tag `
+            --title "TraceDigest $env:GITHUB_REF_NAME" `
+            --generate-notes
