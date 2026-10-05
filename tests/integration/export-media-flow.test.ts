@@ -1,4 +1,4 @@
-import { dirname, join } from 'path'
+import { basename, dirname, join } from 'path'
 import {
   chmodSync,
   existsSync,
@@ -1311,7 +1311,10 @@ describe('media export flow', () => {
     expect(readFileSync(second.outputPath!).subarray(0, 2).toString()).toBe('PK')
     const entries =
       process.platform === 'win32'
-        ? execFileSync('tar', ['-tf', second.outputPath!], { encoding: 'utf8' })
+        ? execFileSync('tar', ['-tf', basename(second.outputPath!)], {
+            encoding: 'utf8',
+            cwd: dirname(second.outputPath!)
+          })
         : execFileSync('unzip', ['-Z1', second.outputPath!], { encoding: 'utf8' })
     const htmlPath = join(state.documents, 'Hanajian', '导出', 'zip-fixture', 'index.html')
     const archive = readArchive(htmlPath)

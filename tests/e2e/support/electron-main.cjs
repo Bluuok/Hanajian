@@ -9,7 +9,10 @@ const userData = process.env.WXE_E2E_USER_DATA
 if (!userData) throw new Error('WXE_E2E_USER_DATA is required')
 app.setPath('userData', userData)
 app.setPath('logs', path.join(userData, 'logs'))
-app.commandLine.appendSwitch('disable-gpu')
+// Use the same software GL driver on local machines and GPU-less CI runners.
+// https://chromium.googlesource.com/chromium/src/+/HEAD/docs/gpu/swiftshader.md
+app.commandLine.appendSwitch('use-gl', 'angle')
+app.commandLine.appendSwitch('use-angle', 'swiftshader')
 
 const VALID_KEY = 'a'.repeat(64)
 const imageData = `data:image/png;base64,${fs.readFileSync(path.join(root, 'resources/icon.png')).toString('base64')}`
