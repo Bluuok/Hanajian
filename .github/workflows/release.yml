@@ -1,24 +1,37 @@
 name: Release Windows
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing v<package version> tag to publish'
+        type: string
+        required: true
+      confirm_publish:
+        description: 'Publish the installer to Bluuok/Hanajian Releases'
+        type: boolean
+        default: false
+        required: true
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.release_tag }}
   cancel-in-progress: false
 
 jobs:
   build-windows:
     name: Build and publish Windows installer
+    if: github.repository == 'Bluuok/Hanajian' && inputs.confirm_publish == true
+    permissions:
+      contents: write
     runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag }}
 
       - uses: pnpm/action-setup@v4
         with:
@@ -26,7 +39,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - uses: actions/setup-go@v5
@@ -35,12 +48,14 @@ jobs:
           cache-dependency-path: services/wechat-connector/go.sum
 
       - name: Verify tag matches package version
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
         shell: pwsh
         run: |
           $packageVersion = (Get-Content package.json | ConvertFrom-Json).version
           $expectedTag = "v$packageVersion"
-          if ($env:GITHUB_REF_NAME -ne $expectedTag) {
-            throw "Release tag $env:GITHUB_REF_NAME does not match package version $packageVersion. Expected $expectedTag."
+          if ($env:RELEASE_TAG -ne $expectedTag) {
+            throw "Release tag $env:RELEASE_TAG does not match package version $packageVersion. Expected $expectedTag."
           }
 
       - name: Install dependencies
@@ -52,7 +67,7 @@ jobs:
       - name: Generate SHA256 checksum
         shell: pwsh
         run: |
-          $installer = Get-ChildItem -Path 'dist/TraceDigest-*-setup.exe' | Select-Object -First 1
+          $installer = Get-ChildItem -Path 'dist/hanajian-*-setup.exe' | Select-Object -First 1
           if (-not $installer) {
             throw 'Windows installer was not generated.'
           }
@@ -62,10 +77,10 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TraceDigest-${{ github.ref_name }}-windows-x64
+          name: hanajian-${{ inputs.release_tag }}-windows-x64
           path: |
-            dist/TraceDigest-*-setup.exe
-            dist/TraceDigest-*-setup.exe.blockmap
+            dist/hanajian-*-setup.exe
+            dist/hanajian-*-setup.exe.blockmap
             dist/latest.yml
             dist/SHA256SUMS.txt
           if-no-files-found: error
@@ -75,14 +90,15 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           $assets = @(
-            (Get-ChildItem -Path 'dist/TraceDigest-*-setup.exe').FullName
-            (Get-ChildItem -Path 'dist/TraceDigest-*-setup.exe.blockmap').FullName
+            (Get-ChildItem -Path 'dist/hanajian-*-setup.exe').FullName
+            (Get-ChildItem -Path 'dist/hanajian-*-setup.exe.blockmap').FullName
             (Resolve-Path -LiteralPath 'dist/latest.yml').Path
             (Resolve-Path -LiteralPath 'dist/SHA256SUMS.txt').Path
           )
-          gh release create $env:GITHUB_REF_NAME $assets `
+          gh release create $env:RELEASE_TAG $assets `
             --verify-tag `
-            --title "TraceDigest $env:GITHUB_REF_NAME" `
+            --title "hanajian $env:RELEASE_TAG" `
             --generate-notes

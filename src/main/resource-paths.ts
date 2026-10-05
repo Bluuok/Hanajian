@@ -12,6 +12,8 @@ export function getResourceRoots(): string[] {
   const execDir = dirname(process.execPath)
 
   return unique([
+    process.env.HANAJIAN_RESOURCES_PATH || '',
+    process.env.TRACEDIGEST_RESOURCES_PATH || '',
     process.env.TRACEMEMO_RESOURCES_PATH || '',
     process.env.WECHATEXPLORER_RESOURCES_PATH || '',
     join(process.cwd(), 'resources'),

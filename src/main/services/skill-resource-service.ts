@@ -4,10 +4,11 @@ import { dirname, join } from 'path'
 import { isPackagedRuntime } from '../runtime-mode'
 
 const SKILL_RELATIVE_PATHS = [
+  join('skill', 'hanajian-reader', 'SKILL.md'),
   join('skill', 'tracememo-reader', 'SKILL.md'),
   join('skill', 'wechatexplorer-reader', 'SKILL.md')
 ]
-const GITHUB_URL = 'https://github.com/Bluuok/Hanajian/tree/main/docs/skill/tracememo-reader'
+const GITHUB_URL = 'https://github.com/Bluuok/Hanajian/tree/main/docs/skill/hanajian-reader'
 const SKILL_VERSION = 'v1.2'
 
 type SkillResourceSource = 'development' | 'bundled'
@@ -92,7 +93,7 @@ export function resolveSkillResourceStatus(
       available: false,
       source,
       githubUrl: GITHUB_URL,
-      error: `未找到 TraceMemo Reader Skill 文件（已检查：${candidates.map((item) => item.path).join('；')}）`
+      error: `未找到 Hanajian Reader Skill 文件（已检查：${candidates.map((item) => item.path).join('；')}）`
     }
   }
   return {

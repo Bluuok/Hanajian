@@ -38,6 +38,8 @@ export interface AppSettings {
   compactMode: boolean
   showStartupProgress: boolean
   agentHubCustomInstructions: string
+  platformDownloadDirectory: string
+  platformMarkdownDirectory: string
   ttsSelectedVoiceId: string
   ttsModel: TextToSpeechModel
 }
@@ -121,6 +123,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   compactMode: false,
   showStartupProgress: true,
   agentHubCustomInstructions: '',
+  platformDownloadDirectory: '',
+  platformMarkdownDirectory: '',
   ttsSelectedVoiceId: '',
   ttsModel: 's2.1-pro-free'
 }

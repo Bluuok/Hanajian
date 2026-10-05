@@ -1,6 +1,6 @@
 ---
 name: setup-wechat-share-card
-description: 自动配置和部署 TraceMemo 实验性微信分享卡片服务。用户要求启用、部署、修复或迁移微信分享卡片，配置 Cloudflare Worker/R2/Wrangler，设置 UPLOAD_TOKEN、微信测试号 AppID/AppSecret、JS 接口安全域名，或希望由 Codex、Claude Code 等 Agent 代替手工阅读部署文档时使用。
+description: 自动配置和部署 Hanajian 实验性微信分享卡片服务。用户要求启用、部署、修复或迁移微信分享卡片，配置 Cloudflare Worker/R2/Wrangler，设置 UPLOAD_TOKEN、微信测试号 AppID/AppSecret、JS 接口安全域名，或希望由 Codex、Claude Code 等 Agent 代替手工阅读部署文档时使用。
 ---
 
 # 部署微信分享卡片
@@ -18,7 +18,7 @@ description: 自动配置和部署 TraceMemo 实验性微信分享卡片服务�
 
 ## 自动工作流
 
-1. 定位 TraceMemo 仓库根目录。确认存在 `services/share-card-worker/wrangler.jsonc`。
+1. 定位 Hanajian 仓库根目录。确认存在 `services/share-card-worker/wrangler.jsonc`。
 2. 运行：
 
    ```bash
@@ -60,7 +60,7 @@ description: 自动配置和部署 TraceMemo 实验性微信分享卡片服务�
    - 部署 Worker；
    - 检查 `/health` 和微信签名接口。
 8. OAuth 页面出现时，让用户只完成浏览器登录/授权；不要改用 API Token，除非用户主动要求。
-9. 部署后把服务地址告诉用户，并提醒他在 TraceMemo 卡片弹窗粘贴 `.env` 中的 `WECHAT_SHARE_UPLOAD_TOKEN`。优先把 Token 复制到剪贴板，不在聊天中展示：
+9. 部署后把服务地址告诉用户，并提醒他在 Hanajian 卡片弹窗粘贴 `.env` 中的 `WECHAT_SHARE_UPLOAD_TOKEN`。优先把 Token 复制到剪贴板，不在聊天中展示：
 
    ```bash
    bash docs/skill/setup-wechat-share-card/scripts/setup.sh copy-token
@@ -74,7 +74,7 @@ description: 自动配置和部署 TraceMemo 实验性微信分享卡片服务�
 - `whoami` 已登录正确账号：不要重复登录。
 - R2 已存在：继续，不把“已存在”视为失败。
 - 自定义域名有 A/AAAA/CNAME 冲突：报告准确域名并要求用户选择删除冲突记录或换子域名；不要擅自删除 DNS。
-- HTTP 401：重新同步 `.env` 中的 `WECHAT_SHARE_UPLOAD_TOKEN` 到 Worker，再让用户更新 TraceMemo。
+- HTTP 401：重新同步 `.env` 中的 `WECHAT_SHARE_UPLOAD_TOKEN` 到 Worker，再让用户更新 Hanajian。
 - “微信 JS-SDK 尚未配置”：重新写入 AppID/AppSecret 并部署。
 - 微信返回 AppID/AppSecret 错误：让用户检查是否来自同一个测试号、AppSecret 是否已重置。
 - 缺少 JS 接口安全域名或测试号关注：这是微信后台操作，明确告诉用户要填写什么，不要假装已完成。

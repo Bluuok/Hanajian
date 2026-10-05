@@ -43,14 +43,20 @@ function NavIcon({ page }: NavIconProps): React.ReactElement {
           <path d="M5.5 15.5v3h13v-3" />
         </svg>
       )
-    case 'agent-hub':
+    case 'ai-assistant-settings':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <rect x="5" y="7" width="14" height="11" rx="3" />
+          <path d="M8 7h8a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3Z" />
           <path d="M12 4.5V7" />
           <circle cx="9.5" cy="12" r="1" />
           <circle cx="14.5" cy="12" r="1" />
           <path d="M9.5 15h5" />
+        </svg>
+      )
+    case 'platform-integration':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 7h6l2 2h8v11H4zM4 7V4h7l2 3M12 12v5m-2-2 2 2 2-2" />
         </svg>
       )
     case 'settings':

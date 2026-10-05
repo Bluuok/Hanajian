@@ -39,17 +39,17 @@ describe('production runtime packaging', () => {
 
   it('requires the bundled Reader Skill declared by extraResources', () => {
     const resources = join(root, 'reader-skill-resources')
-    const skillPath = join(resources, 'skill', 'tracememo-reader', 'SKILL.md')
+    const skillPath = join(resources, 'skill', 'hanajian-reader', 'SKILL.md')
     const config = readFileSync(resolve(__dirname, '../../electron-builder.yml'), 'utf8')
 
-    expect(config).toContain('docs/skill/tracememo-reader')
-    expect(config).toContain('to: skill/tracememo-reader')
+    expect(config).toContain('docs/skill/hanajian-reader')
+    expect(config).toContain('to: skill/hanajian-reader')
     expect(() => validateReaderSkillRuntime(resources)).toThrow(
-      /Missing bundled TraceMemo Reader Skill/
+      /Missing bundled Hanajian Reader Skill/
     )
 
     mkdirSync(dirname(skillPath), { recursive: true })
-    writeFileSync(skillPath, '# TraceMemo Reader\n')
+    writeFileSync(skillPath, '# Hanajian Reader\n')
     expect(validateReaderSkillRuntime(resources)).toBe(skillPath)
   })
 
@@ -60,7 +60,7 @@ describe('production runtime packaging', () => {
 
   it('uses a Windows x64-only resource set', () => {
     const config = readFileSync(resolve(__dirname, '../../electron-builder.win.yml'), 'utf8')
-    expect(config).toContain('connectors/wechat/win32-x64/**')
+    expect(config).not.toContain('connectors/wechat/win32-x64/**')
     expect(config).toContain('key/win32/x64/**')
     expect(config).toContain('wcdb/win32/x64/**')
     expect(config).toContain('electronLanguages:')
@@ -92,7 +92,8 @@ describe('production runtime packaging', () => {
       'ffmpeg-static',
       'fs-extra',
       'jsonrepair',
-      'koffi'
+      'koffi',
+      'playwright-core'
     ]
     for (const packageName of packages) {
       const packagePath = join(source, 'node_modules', ...packageName.split('/'))

@@ -12,7 +12,8 @@ const REQUIRED_RUNTIME_PACKAGES = [
   'ffmpeg-static',
   'fs-extra',
   'jsonrepair',
-  'koffi'
+  'koffi',
+  'playwright-core'
 ]
 
 function getRuntimeResources(context) {
@@ -100,9 +101,9 @@ function validateAsarRuntimeDependencies(runtimeResources) {
   }
 }
 function validateReaderSkillRuntime(runtimeResources) {
-  const skillPath = path.join(runtimeResources, 'skill', 'tracememo-reader', 'SKILL.md')
+  const skillPath = path.join(runtimeResources, 'skill', 'hanajian-reader', 'SKILL.md')
   if (!existsSync(skillPath)) {
-    throw new Error(`Missing bundled TraceMemo Reader Skill: ${skillPath}`)
+    throw new Error(`Missing bundled Hanajian Reader Skill: ${skillPath}`)
   }
   return skillPath
 }
@@ -141,7 +142,6 @@ exports.default = async function afterPack(context) {
     }
     return
   }
-
 }
 
 exports.getRuntimeResources = getRuntimeResources

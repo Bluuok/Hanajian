@@ -50,7 +50,7 @@ describe('durable topic subscriptions', () => {
       endTime: Date.parse('2026-09-11T23:59:59+08:00') / 1000
     })
   })
-  it('persists blocked native delivery and does not duplicate after a restart', async () => {
+  it('persists completed local summaries and does not duplicate after a restart', async () => {
     const generate = vi.fn().mockResolvedValue({ id: 'bundle' })
     const { center, root } = setup(generate)
     center.saveSubscription({ ...rule, id: undefined })
@@ -58,7 +58,7 @@ describe('durable topic subscriptions', () => {
     const restarted = new TopicCenterService(root, () => 'account-a', generate)
     await restarted.tick(now + 60000)
     expect(generate).toHaveBeenCalledTimes(1)
-    expect(restarted.getState().runs[0].status).toBe('blocked')
+    expect(restarted.getState().runs[0].status).toBe('completed')
     expect(restarted.getState().nativeForward.supported).toBe(false)
   })
   it('isolates accounts and pauses disabled subscriptions', async () => {

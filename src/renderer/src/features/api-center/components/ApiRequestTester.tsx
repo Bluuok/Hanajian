@@ -34,17 +34,6 @@ export function ApiRequestTester({
 }: Props): ReactElement {
   const url = settings ? buildApiUrl(settings.apiHost, settings.apiPort, endpoint.path, params) : ''
   const update = (key: string, value: string): void => onParams({ ...params, [key]: value })
-  const selectTestImage = async (): Promise<void> => {
-    const result = await window.api.selectAgentHubTestImage()
-    if (result.canceled || !result.path) return
-    let payload: Record<string, unknown> = {}
-    try {
-      payload = JSON.parse(body) as Record<string, unknown>
-    } catch {
-      // Replace an invalid draft with a valid send-test request.
-    }
-    onBody(JSON.stringify({ ...payload, media_url: result.path }, null, 2))
-  }
   return (
     <section className="api-request-tester" id="api-request-tester">
       <div className="api-section-heading">
@@ -83,14 +72,6 @@ export function ApiRequestTester({
             spellCheck={false}
           />
         </label>
-      )}
-      {endpoint.id === 'agent-send' && (
-        <div className="api-upload-test-row">
-          <Button size="sm" variant="outline" onClick={() => void selectTestImage()}>
-            选择测试图片
-          </Button>
-          <span>选择后只会填入本地路径；点击“发送请求”才会真正发送。</span>
-        </div>
       )}
       <div className="api-tester-actions">
         <Button size="sm" variant="ghost" onClick={onClear}>

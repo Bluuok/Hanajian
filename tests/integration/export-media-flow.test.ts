@@ -251,6 +251,23 @@ const readArchive = (
 }
 
 describe('media export flow', () => {
+  it('uses the new folder for fresh exports and keeps legacy incremental archives in place', async () => {
+    const { resolveDefaultExportRoot } = await import('../../src/main/export-service')
+    const current = join(state.documents, 'Hanajian', '导出')
+    const legacy = join(state.documents, 'TraceDigest', '导出')
+    const older = join(state.documents, 'WechatExplorer', '导出')
+    expect(await resolveDefaultExportRoot()).toBe(current)
+    expect(await resolveDefaultExportRoot('fresh')).toBe(current)
+    mkdirSync(join(legacy, 'existing'), { recursive: true })
+    writeFileSync(join(legacy, 'existing', 'marker.txt'), 'keep me')
+    expect(await resolveDefaultExportRoot('existing')).toBe(legacy)
+    expect(readFileSync(join(legacy, 'existing', 'marker.txt'), 'utf8')).toBe('keep me')
+    mkdirSync(join(current, 'existing'), { recursive: true })
+    expect(await resolveDefaultExportRoot('existing')).toBe(current)
+    mkdirSync(join(older, 'older'), { recursive: true })
+    expect(await resolveDefaultExportRoot('older')).toBe(older)
+  })
+
   beforeEach(() => {
     state.documents = mkdtempSync(join(tmpdir(), 'wxe-export-fixture-'))
     state.accountRoot = join(state.documents, 'fixture-account')
@@ -1236,7 +1253,7 @@ describe('media export flow', () => {
 
     expect(result).toEqual({ success: false, error: '已取消' })
     expect(state.exportReads).toEqual(['cancel-1'])
-    const outputDir = join(state.documents, 'TraceDigest', '导出', 'cancelled-all-conversations')
+    const outputDir = join(state.documents, 'Hanajian', '导出', 'cancelled-all-conversations')
     expect(existsSync(join(outputDir, '联系人', '联系人一', 'index.html'))).toBe(true)
     expect(existsSync(join(outputDir, '联系人', '联系人二', 'index.html'))).toBe(false)
     const partialManifest = JSON.parse(readFileSync(join(outputDir, '导出清单.json'), 'utf8')) as {
@@ -1292,13 +1309,16 @@ describe('media export flow', () => {
     expect(second.outputPath).toBe(first.outputPath)
     expect(firstSize).toBeGreaterThan(0)
     expect(readFileSync(second.outputPath!).subarray(0, 2).toString()).toBe('PK')
-    const entries = execFileSync('unzip', ['-Z1', second.outputPath!], { encoding: 'utf8' })
-    const htmlPath = join(state.documents, 'TraceDigest', '导出', 'zip-fixture', 'index.html')
+    const entries =
+      process.platform === 'win32'
+        ? execFileSync('tar', ['-tf', second.outputPath!], { encoding: 'utf8' })
+        : execFileSync('unzip', ['-Z1', second.outputPath!], { encoding: 'utf8' })
+    const htmlPath = join(state.documents, 'Hanajian', '导出', 'zip-fixture', 'index.html')
     const archive = readArchive(htmlPath)
     expect(entries).toContain('zip-fixture/index.html')
     expect(entries).toContain('zip-fixture/data/messages.js')
     const avatarEntries = entries
-      .split('\n')
+      .split(/\r?\n/)
       .filter((entry) => /zip-fixture\/avatars\/avatar_[0-9a-f]{16}\.png$/.test(entry))
     expect(avatarEntries).toHaveLength(1)
     expect(archive.conversations[0].avatarUrl).toBe(archive.messages[0].exportAvatarUrl)
@@ -1307,7 +1327,7 @@ describe('media export flow', () => {
       true
     )
     expect(
-      readdirSync(join(state.documents, 'TraceDigest', '导出')).some((name) =>
+      readdirSync(join(state.documents, 'Hanajian', '导出')).some((name) =>
         name.startsWith('zip-fixture.zip.tmp-')
       )
     ).toBe(false)
@@ -1348,7 +1368,7 @@ describe('media export flow', () => {
     expect(cancelled).toEqual({ success: false, error: '已取消' })
     expect(readFileSync(first.outputPath!)).toEqual(completeZip)
     expect(
-      readdirSync(join(state.documents, 'TraceDigest', '导出')).some((name) =>
+      readdirSync(join(state.documents, 'Hanajian', '导出')).some((name) =>
         name.startsWith('zip-cancel-fixture.zip.tmp-')
       )
     ).toBe(false)

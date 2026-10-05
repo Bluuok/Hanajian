@@ -9,7 +9,11 @@ function resolveGoRuntime() {
   const localRuntime = fs.existsSync(localRuntimePath)
     ? JSON.parse(fs.readFileSync(localRuntimePath, 'utf8'))
     : {}
-  const executable = process.env.TRACEDIGEST_GO_EXE || localRuntime.goExecutable || 'go'
+  const executable =
+    process.env.HANAJIAN_GO_EXE ||
+    process.env.TRACEDIGEST_GO_EXE ||
+    localRuntime.goExecutable ||
+    'go'
   const goPath = process.env.GOPATH || localRuntime.goPath
   const env = { ...process.env }
   if (goPath) env.GOPATH = goPath
@@ -18,7 +22,7 @@ function resolveGoRuntime() {
   } catch (error) {
     if (error.code === 'ENOENT') {
       throw new Error(
-        `Go executable not found: ${executable}. Add Go to PATH, set TRACEDIGEST_GO_EXE, or configure .go-runtime.json.`
+        `Go executable not found: ${executable}. Add Go to PATH, set HANAJIAN_GO_EXE (legacy TRACEDIGEST_GO_EXE also works), or configure .go-runtime.json.`
       )
     }
     throw error

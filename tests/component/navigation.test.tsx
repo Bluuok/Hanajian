@@ -18,7 +18,9 @@ describe('PrimaryNavigation', () => {
     expect(screen.queryByRole('button', { name: 'API' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '档案' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '问问 AI' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Clawbot' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Clawbot' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '助手设置' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '内容收藏' })).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: '设置' }))
     expect(onPageChange).toHaveBeenCalledWith('settings')

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# TraceMemo v2.2.0 Local HTTP API 手动验收脚本
+# Hanajian v2.2.0 Local HTTP API 手动验收脚本
 # 仅用于 macOS Terminal；不会写入或输出真实 API Token。
 
 set -u
@@ -18,7 +18,7 @@ pass() { PASS_COUNT=$((PASS_COUNT + 1)); printf 'PASS  %s\n' "$1"; }
 fail() { FAIL_COUNT=$((FAIL_COUNT + 1)); printf 'FAIL  %s%s\n' "$1" "${2:+ ($2)}"; }
 skip() { SKIP_COUNT=$((SKIP_COUNT + 1)); printf 'SKIP  %s\n' "$1"; }
 
-printf 'TraceMemo Local HTTP API 手动测试\n'
+printf 'Hanajian Local HTTP API 手动测试\n'
 printf 'API 地址: %s\n\n' "$API_BASE_URL"
 read -r -s -p '请输入 API Token（不会显示）: ' API_TOKEN
 printf '\n'

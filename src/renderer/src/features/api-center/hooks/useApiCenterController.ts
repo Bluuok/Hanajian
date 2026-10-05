@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useReducer } from 'react'
 import type { Contact } from '../../../../../shared/types'
 import { findEndpoint } from '../model/apiEndpoints'
-import {
-  AGENT_GROUP_REPORT_PRESET,
-  AGENT_SEND_PRESET,
-  REPORT_REQUEST_PRESET
-} from '../model/requestPresets'
+import { AGENT_GROUP_REPORT_PRESET, REPORT_REQUEST_PRESET } from '../model/requestPresets'
 import { type AgentInstallTarget, type SkillInstallSource } from '../model/skillDistribution'
 import type {
   ApiResponse,
@@ -97,9 +93,7 @@ function reducer(state: State, action: Action): State {
           ? REPORT_REQUEST_PRESET
           : action.endpointId === 'agent-group-report'
             ? AGENT_GROUP_REPORT_PRESET
-            : action.endpointId === 'agent-send'
-              ? AGENT_SEND_PRESET
-              : state.body
+            : state.body
       return {
         ...state,
         endpointId: action.endpointId,

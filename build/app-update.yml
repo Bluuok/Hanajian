@@ -1,5 +1,5 @@
 provider: github
 owner: Bluuok
-repo: TraceDigest
+repo: Hanajian
 releaseType: release
-updaterCacheDirName: tracedigest-updater
+updaterCacheDirName: hanajian-updater

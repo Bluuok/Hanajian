@@ -1,11 +1,7 @@
 import React from 'react'
-import type {
-  AgentHubLogEntry,
-  AgentHubLogSource,
-  AgentHubStatus,
-  WechatConnectorStatus
-} from '../../../../shared/agent-hub'
+import type { AgentHubLogEntry, AgentHubLogSource } from '../../../../shared/agent-hub'
 import { AGENT_HUB_CUSTOM_INSTRUCTIONS_MAX_LENGTH } from '../../../../shared/agent-hub'
+import booksCorner from '../../assets/hanajian/decor/books-corner.png'
 import {
   Button,
   Select,
@@ -16,29 +12,12 @@ import {
   Textarea
 } from '../../components/ui'
 
-const STATUS_LABELS: Record<WechatConnectorStatus, string> = {
-  checking: '正在检查',
-  disconnected: '未连接',
-  starting: '正在连接',
-  waiting_scan: '等待扫码',
-  scanned: '已扫码，等待手机确认',
-  online: '在线',
-  error: '连接异常'
-}
-
 const LOG_SOURCE_LABELS: Record<AgentHubLogSource, string> = {
   system: '系统',
-  'agent-hub': 'Clawbot',
-  'wechat-connector': '微信连接器'
+  'agent-hub': '问问 AI'
 }
 
-export function AgentHubWorkspace(): React.ReactElement {
-  const [status, setStatus] = React.useState<AgentHubStatus>({
-    hub: 'offline',
-    connector: 'checking',
-    updatedAt: Date.now()
-  })
-  const [busy, setBusy] = React.useState(false)
+export function AIAssistantSettingsWorkspace(): React.ReactElement {
   const [logs, setLogs] = React.useState<AgentHubLogEntry[]>([])
   const [logSource, setLogSource] = React.useState<'all' | AgentHubLogSource>('all')
   const [customInstructions, setCustomInstructions] = React.useState('')
@@ -55,9 +34,6 @@ export function AgentHubWorkspace(): React.ReactElement {
 
   React.useEffect(() => {
     let mounted = true
-    void window.api.getAgentHubStatus().then((next) => {
-      if (mounted) setStatus(next)
-    })
     void window.api.getAgentHubLogs().then((entries) => {
       if (mounted) setLogs(entries)
     })
@@ -77,15 +53,11 @@ export function AgentHubWorkspace(): React.ReactElement {
           })
         }
       })
-    const unsubscribe = window.api.onAgentHubStatus((next) => {
-      if (mounted) setStatus(next)
-    })
     const unsubscribeLog = window.api.onAgentHubLog((entry) => {
       if (mounted) setLogs((current) => [...current.slice(-799), entry])
     })
     return () => {
       mounted = false
-      unsubscribe()
       unsubscribeLog()
     }
   }, [])
@@ -138,174 +110,36 @@ export function AgentHubWorkspace(): React.ReactElement {
     }
   }
 
-  const runAction = async (
-    action: () => Promise<{ status: AgentHubStatus; error?: string }>
-  ): Promise<void> => {
-    setBusy(true)
-    try {
-      const result = await action()
-      setStatus(result.status)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const isLoginFlow = ['starting', 'waiting_scan', 'scanned'].includes(status.connector)
-  const showQRCode = Boolean(status.qrCodeDataUrl) && status.connector !== 'online'
-
   return (
     <div className="agent-hub-workspace">
       <header className="agent-hub-header">
         <div>
-          <div className="agent-hub-eyebrow">TraceDigest</div>
-          <h1>Clawbot</h1>
-          <p>让微信机器人安全调用聊天数据与 AI 能力。</p>
+          <div className="agent-hub-eyebrow">问问 AI</div>
+          <h1>AI 助手设置</h1>
+          <p>管理总结提示词并查看本机 AI 的运行日志。</p>
         </div>
-        <span className={`agent-hub-runtime ${status.hub}`}>
-          Clawbot {status.hub === 'online' ? '运行中' : '未运行'}
-        </span>
+        <div className="agent-hub-header-aside">
+          <span className="agent-hub-prompt-guard">仅使用本机只读聊天工具</span>
+          <img src={booksCorner} alt="" aria-hidden="true" />
+        </div>
       </header>
-
-      <div className="agent-hub-grid">
-        <section className="agent-hub-card agent-hub-login-card">
-          <div className="agent-hub-card-heading">
-            <div>
-              <span className="agent-hub-card-kicker">微信机器人</span>
-              <h2>连接微信</h2>
-            </div>
-            <span className={`agent-hub-status ${status.connector}`}>
-              <i aria-hidden />
-              {STATUS_LABELS[status.connector]}
-            </span>
-          </div>
-
-          {showQRCode ? (
-            <div className="agent-hub-qr-panel">
-              <div className="agent-hub-qr-frame">
-                <img src={status.qrCodeDataUrl} alt="微信机器人登录二维码" />
-              </div>
-              <div className="agent-hub-qr-copy">
-                <h3>
-                  {status.connector === 'scanned' ? '请在手机上确认登录' : '使用微信扫描二维码'}
-                </h3>
-                <p>二维码仅用于机器人账号登录，不会读取你的微信密码。</p>
-                <Button
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => void runAction(() => window.api.cancelAgentHubLogin())}
-                >
-                  取消
-                </Button>
-              </div>
-            </div>
-          ) : status.connector === 'online' ? (
-            <div className="agent-hub-connected">
-              <div className="agent-hub-connected-icon" aria-hidden>
-                ✓
-              </div>
-              <div>
-                <h3>微信机器人已连接</h3>
-                <p>{status.accountId || status.wechatUserId || '登录凭据已就绪'}</p>
-              </div>
-            </div>
-          ) : (
-            <div className="agent-hub-empty-login">
-              <div className="agent-hub-phone" aria-hidden>
-                <span />
-              </div>
-              <h3>{status.connector === 'error' ? '连接遇到问题' : '尚未连接微信机器人'}</h3>
-              <p>{status.error || '扫码登录后，即可从微信向 Clawbot 提问。'}</p>
-            </div>
-          )}
-
-          <div className="agent-hub-actions">
-            {status.connector === 'online' ? (
-              <>
-                <Button
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => void runAction(() => window.api.startAgentHubLogin())}
-                >
-                  重新扫码登录
-                </Button>
-                <Button
-                  variant="destructive"
-                  disabled={busy}
-                  onClick={() => void runAction(() => window.api.disconnectAgentHub())}
-                >
-                  断开连接
-                </Button>
-              </>
-            ) : !isLoginFlow ? (
-              <Button
-                disabled={busy || status.hub !== 'online'}
-                onClick={() => void runAction(() => window.api.startAgentHubLogin())}
-              >
-                {busy ? '正在获取二维码…' : '扫码登录微信机器人'}
-              </Button>
-            ) : null}
-          </div>
-        </section>
-
-        <aside className="agent-hub-card agent-hub-capability-card">
-          <span className="agent-hub-card-kicker">已启用能力</span>
-          <h2>微信数据助手</h2>
-          <p>机器人通过本机 Clawbot 调用 TraceDigest，不向公网暴露数据库。</p>
-          <div className="agent-hub-example">
-            <span>支持自然语言总结，可以这样问</span>
-            <strong>“总结产品交流群最近 100 条消息”</strong>
-            <strong>“总结产品交流群今天下午的消息”</strong>
-            <strong>“总结技术群里张三最近的发言”</strong>
-          </div>
-          <ul>
-            <li>
-              <i />
-              本机 HTTP 通信
-            </li>
-            <li>
-              <i />
-              入站请求鉴权
-            </li>
-            <li>
-              <i />
-              消息重复保护
-            </li>
-            <li>
-              <i />
-              AI 自主调用只读群聊查询工具
-            </li>
-            <li>
-              <i />
-              不提供删除、修改、群发或主动发送工具
-            </li>
-            <li className="agent-hub-capability-status">
-              <i className={status.dataApi === 'online' ? '' : 'offline'} />
-              本地数据 API：{status.dataApi === 'online' ? '已连接' : '未连接'}
-            </li>
-            <li className="agent-hub-capability-status">
-              <i className={status.databaseReady ? '' : 'offline'} />
-              微信数据库：{status.databaseReady ? '可查询' : '未就绪'}
-            </li>
-          </ul>
-        </aside>
-      </div>
 
       <section className="agent-hub-card agent-hub-prompt-card">
         <div className="agent-hub-prompt-heading">
           <div>
-            <span className="agent-hub-card-kicker">Clawbot 行为</span>
+            <span className="agent-hub-card-kicker">回答偏好</span>
             <h2>自定义总结指令</h2>
-            <p>只调整总结的重点、结构、篇幅和表达方式，不会改变工具权限。</p>
+            <p>调整总结的重点、结构、篇幅和表达方式，不会改变工具权限。</p>
           </div>
           <span className="agent-hub-prompt-guard">只读规则始终生效</span>
         </div>
         <div className="agent-hub-prompt-guardrail">
-          内置安全 Prompt 不可编辑：Agent 仍只能读取群聊，不能删除、修改、群发或主动发送消息。
+          内置安全 Prompt 不可编辑：AI 只能读取本地群聊，不能删除、修改或发送微信消息。
         </div>
-        <label className="agent-hub-prompt-field" htmlFor="agent-hub-custom-instructions">
+        <label className="agent-hub-prompt-field" htmlFor="ai-assistant-custom-instructions">
           <span>附加指令</span>
           <Textarea
-            id="agent-hub-custom-instructions"
+            id="ai-assistant-custom-instructions"
             value={customInstructions}
             maxLength={promptMaxLength}
             onChange={(event) => {
@@ -350,7 +184,7 @@ export function AgentHubWorkspace(): React.ReactElement {
         <div className="agent-hub-log-heading">
           <div>
             <span className="agent-hub-card-kicker">故障诊断</span>
-            <h2>运行日志</h2>
+            <h2>AI 运行日志</h2>
           </div>
           <div className="agent-hub-log-actions">
             <Select
@@ -363,8 +197,7 @@ export function AgentHubWorkspace(): React.ReactElement {
               <SelectContent>
                 <SelectItem value="all">全部来源</SelectItem>
                 <SelectItem value="system">系统</SelectItem>
-                <SelectItem value="agent-hub">Clawbot</SelectItem>
-                <SelectItem value="wechat-connector">微信连接器</SelectItem>
+                <SelectItem value="agent-hub">问问 AI</SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -383,7 +216,7 @@ export function AgentHubWorkspace(): React.ReactElement {
         <div className="agent-hub-log-body" ref={logBodyRef}>
           {visibleLogs.length === 0 ? (
             <div className="agent-hub-log-empty">
-              暂无运行日志。收到消息后，这里会显示处理到哪一步。
+              暂无运行日志。在“问问 AI”中提问后，这里会显示处理到哪一步。
             </div>
           ) : (
             visibleLogs.map((entry) => (
@@ -395,7 +228,7 @@ export function AgentHubWorkspace(): React.ReactElement {
             ))
           )}
         </div>
-        <p className="agent-hub-log-note">日志会隐藏 Token 和二维码数据，不记录你的微信密码。</p>
+        <p className="agent-hub-log-note">日志会隐藏 Token，不保存发送能力，也不记录微信密码。</p>
       </section>
     </div>
   )

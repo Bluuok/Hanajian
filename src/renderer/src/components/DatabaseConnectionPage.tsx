@@ -1,16 +1,17 @@
 import { APP_BRAND } from '../brand'
+import brandIcon from '../assets/brand-icon.svg'
 import React from 'react'
 import type { DatabaseKeyEnvironment, WechatAccountCandidate } from '../../../shared/database-key'
 import { WINDOWS_VC_RUNTIME_DOWNLOAD_URL } from '../../../shared/windows-runtime'
 import { Button, IconButton, Input, Tabs, TabsList, TabsTrigger } from './ui'
 
-const GUIDE_URL =
-  'https://github.com/Bluuok/Hanajian/blob/main/docs/user-guide/getting-started.md'
+const GUIDE_URL = 'https://github.com/Bluuok/Hanajian/blob/main/docs/user-guide/getting-started.md'
 
 export type DatabaseConnectionMode = 'automatic' | 'manual'
 export type DatabaseConnectionStatusKind = 'normal' | 'success' | 'error'
 
 interface DatabaseConnectionPageProps {
+  onOpenPlatformIntegration?: () => void
   platform: string
   mode: DatabaseConnectionMode
   dbKey: string
@@ -103,6 +104,7 @@ function StoragePathHelp(): React.ReactElement {
 }
 
 export function DatabaseConnectionPage({
+  onOpenPlatformIntegration,
   platform,
   mode,
   dbKey,
@@ -146,12 +148,12 @@ export function DatabaseConnectionPage({
       <section className="database-login-brand" aria-label={`${APP_BRAND.name} 产品说明`}>
         <div className="database-login-brand-content">
           <div className="database-login-logo" aria-hidden="true">
-            <LineIcon name="database" />
+            <img src={brandIcon} alt="" width={56} height={56} />
           </div>
           <h1>
             {APP_BRAND.name} · {APP_BRAND.englishName}
           </h1>
-          <p className="database-login-tagline">让 AI 读懂你的微信</p>
+          <p className="database-login-tagline">{APP_BRAND.tagline}</p>
           <p className="database-login-description">
             连接成功后，你可以搜索聊天记录、生成群聊日报，并按需使用 AI 分析。
           </p>
@@ -259,7 +261,7 @@ export function DatabaseConnectionPage({
                               '确认下方检测结果；没有找到目录时可以手动选择。',
                               '请退出当前微信账号，让微信停留在登录页面，然后点击“我已准备好”。',
                               '开始后请按页面提示完成系统授权。',
-                              '正在准备连接组件，请不要关闭微信或 TraceMemo。',
+                              '正在准备连接组件，请不要关闭微信或 Hanajian。',
                               '请回到微信完成登录，登录成功后再回来验证。',
                               '正在验证密钥和本地数据库，请稍候。'
                             ][guideStep - 1]}
@@ -562,6 +564,11 @@ export function DatabaseConnectionPage({
           </Tabs>
 
           <div className="database-login-footer-actions">
+            {onOpenPlatformIntegration && (
+              <Button variant="outline" size="sm" onClick={onOpenPlatformIntegration}>
+                先打开内容收藏
+              </Button>
+            )}
             <Button variant="destructive" size="sm" onClick={onClearKey}>
               清除已保存密钥
             </Button>

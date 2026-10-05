@@ -288,7 +288,7 @@ export function buildImageTestDiagnosticLog(input: {
   const rootIsDirectory = rootExists ? safeIsDirectory(root) : false
   const resultCode = input.result.success ? 'SUCCESS' : input.result.code || 'UNKNOWN'
   return [
-    'TraceMemo 图片解析测试日志（已脱敏）',
+    'Hanajian 图片解析测试日志（已脱敏）',
     `时间：${new Date().toISOString()}`,
     `应用版本：${safeAppVersion()}`,
     `运行环境：${process.platform} ${process.arch}`,

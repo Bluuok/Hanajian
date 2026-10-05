@@ -1,8 +1,12 @@
+import {
+  PlatformIntegrationWorkspace,
+  PlatformStandaloneWorkspace
+} from './features/platform-integration/PlatformIntegrationWorkspace'
 import { loadTopicSource } from './features/topics/loadTopicSource'
 import React, { useState } from 'react'
 import { AppShell } from './components/layout/AppShell'
 import { SettingsWorkspace } from './features/settings/SettingsWorkspace'
-import { AgentHubWorkspace } from './features/agent-hub/AgentHubWorkspace'
+import { AIAssistantSettingsWorkspace } from './features/agent-hub/AgentHubWorkspace'
 import { TopicsWorkspace } from './features/topics/TopicsWorkspace'
 import { AskAIWorkspace } from './features/ask-ai/AskAIWorkspace'
 import type { SettingsCategoryId } from './features/settings/model/types'
@@ -242,6 +246,7 @@ function App(): React.ReactElement {
   const [databaseEnvironment, setDatabaseEnvironment] = useState<DatabaseKeyEnvironment>()
   const connectionOperationRef = React.useRef(0)
   const [activePage, setActivePage] = useState<AppPage>('topics')
+  const [standalonePlatformOpen, setStandalonePlatformOpen] = useState(false)
   const [sourceSnapshot, setSourceSnapshot] = useState<{
     groupId: string
     targetMessageId?: string
@@ -933,7 +938,7 @@ function App(): React.ReactElement {
         })
         setStartupProgress({
           title: '正在加载账号信息...',
-          subtitle: '即将进入 TraceDigest',
+          subtitle: '即将进入 Hanajian',
           detail: '正在读取联系人和当前账号',
           percent: 70
         })
@@ -1579,6 +1584,11 @@ function App(): React.ReactElement {
     setShowFirstUseWelcome(true)
   }
 
+  const openFirstUseChat = (): void => {
+    dismissFirstUseWelcome()
+    setActivePage('ask-ai')
+  }
+
   const openFirstUseReport = (): void => {
     dismissFirstUseWelcome()
     setReportWorkspaceView('configure')
@@ -1705,9 +1715,6 @@ function App(): React.ReactElement {
   ])
 
   const selectedReport = generatedReports.find((report) => report.id === selectedReportId) || null
-  const selectedReportContact = selectedReport
-    ? contacts.find((contact) => contact.md5 === selectedReport.contactId) || null
-    : null
 
   const openReportResult = (): void => {
     if (isSavingGeneratedReport) {
@@ -1809,7 +1816,6 @@ function App(): React.ReactElement {
           onCopyImage={handleCopyReportImage}
           onReveal={handleRevealReport}
           onSwitchTemplate={handleSwitchReportTemplate}
-          sendTarget={selectedReportContact}
         />
         <ReportInfoPanel report={selectedReport} onReveal={handleRevealReport} />
       </div>
@@ -1895,6 +1901,8 @@ function App(): React.ReactElement {
             : null
         return (
           <AskAIWorkspace
+            key={selfInfo?.accountRoot || dbRootInput}
+            accountScope={selfInfo?.accountRoot || dbRootInput}
             contacts={contacts}
             selectedContact={selectedContact}
             messages={activeSnapshot ? activeSnapshot.messages : messages}
@@ -1925,10 +1933,12 @@ function App(): React.ReactElement {
           />
         )
       }
+      case 'platform-integration':
+        return <PlatformIntegrationWorkspace />
       case 'report':
         return renderReportWorkspace()
-      case 'agent-hub':
-        return <AgentHubWorkspace />
+      case 'ai-assistant-settings':
+        return <AIAssistantSettingsWorkspace />
       case 'settings':
         return (
           <SettingsWorkspace
@@ -1996,6 +2006,15 @@ function App(): React.ReactElement {
     }
   }
 
+  if (standalonePlatformOpen) {
+    return (
+      <PlatformStandaloneWorkspace
+        theme={appearanceSettings.theme}
+        onBack={() => setStandalonePlatformOpen(false)}
+      />
+    )
+  }
+
   if (!isAuthenticated && bootState !== 'login') {
     const title =
       startupProgress?.title ||
@@ -2006,7 +2025,7 @@ function App(): React.ReactElement {
         ? autoConnectSource === 'env'
           ? '检测到环境变量中的密钥'
           : '使用上次安全保存的密钥'
-        : 'TraceDigest')
+        : 'Hanajian')
     return (
       <div className={`boot-splash ${appearanceSettings.showStartupProgress ? '' : 'is-quiet'}`}>
         <div className="boot-splash-spinner" aria-hidden />
@@ -2030,6 +2049,7 @@ function App(): React.ReactElement {
   if (!isAuthenticated) {
     return (
       <DatabaseConnectionPage
+        onOpenPlatformIntegration={() => setStandalonePlatformOpen(true)}
         platform={runtimePlatform}
         mode={databaseConnectionMode}
         dbKey={dbKey}
@@ -2148,6 +2168,7 @@ function App(): React.ReactElement {
       {showFirstUseWelcome && (
         <FirstUseWelcome
           onDismiss={dismissFirstUseWelcome}
+          onOpenChat={openFirstUseChat}
           onOpenReport={openFirstUseReport}
           onOpenAISettings={openFirstUseAISettings}
         />

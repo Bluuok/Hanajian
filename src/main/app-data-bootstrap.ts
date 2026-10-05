@@ -17,7 +17,7 @@ const runtimeName =
   isLegacyMigrationHelper ? legacyRuntimeName : TRACE_MEMO_RUNTIME_NAME
 app.setName(runtimeName)
 
-const isolatedUserData = process.env['WXE_USER_DATA']
+const isolatedUserData = process.env['HANAJIAN_USER_DATA'] ?? process.env['WXE_USER_DATA']
 const isUserDataIsolated = !isLegacyMigrationHelper && Boolean(isolatedUserData?.trim())
 const roots = getUserDataRoots(app.getPath('appData'))
 const helperUserData = process.env[LEGACY_MIGRATION_USER_DATA_ENV]
@@ -30,6 +30,7 @@ const selectedUserData = isLegacyMigrationHelper
 app.setPath('userData', selectedUserData)
 app.setPath('sessionData', selectedUserData)
 
+// Runtime name/userData remain stable for safeStorage, keychain and existing profiles.
 // Logs are intentionally independent from userData. New TraceDigest logs go to
 // the new visible directory while historical WechatExplorer logs remain in
 // place and are never moved or renamed.

@@ -2,24 +2,25 @@
 
 ## 当前安全边界
 
-TraceMemo 的本地 API 默认监听 `127.0.0.1:6131`。它面向同一台电脑上的 API Center、Reader Skill、CLI 和 Agent，不是公网网关，也不是带用户账户和细粒度权限 Scope 的服务。
+Hanajian 的本地 API 默认监听 `127.0.0.1:6131`。它面向同一台电脑上的 Reader Skill、CLI 和 Agent，不是公网网关，也不是带用户账户和细粒度权限 Scope 的服务。
 
 ## Bearer Token
 
-新 Agent 配置使用 `TRACEMEMO_API_TOKEN`。v2.2.0 仍兼容读取历史变量 `WECHATEXPLORER_API_TOKEN`，优先级为新变量高于旧变量。
+新 Agent 配置使用 `HANAJIAN_API_TOKEN`。旧配置继续兼容 `TRACEMEMO_API_TOKEN` 与 `WECHATEXPLORER_API_TOKEN`；依次优先读取 Hanajian、TraceMemo、WechatExplorer 前缀。
 
 - `/api/v1/health` 是公开健康检查；
 - 其他所有端点都要求 `Authorization: Bearer <TOKEN>`；
 - Token 由应用生成，使用 32 个随机字节编码；
 - Token 由 Electron `safeStorage` 加密保存在用户数据目录的 `local-api-token.bin`；
 - 文件权限设置为 `0600`；
-- 在“API Center”中可以显示、复制和重新生成；
-- 重新生成后旧 Token 立即失效。
+- Token 轮换后旧 Token 立即失效。
+
+当前界面没有挂载 API Center，因此新用户暂时无法通过界面启用本机 API、复制或轮换 Token。以下步骤仅适用于已启用服务且持有有效授权 Token 的已有集成；没有 Token 时只能检查 health，不要读取加密凭据文件或关闭鉴权。
 
 应用不会自动把 Token 写入 Codex、Claude Code、OpenClaw 或其他 Agent 配置。请把它放进 Agent 自己的本地 secret/environment，例如：
 
 ```bash
-export TRACEMEMO_API_TOKEN="<TOKEN>"
+export HANAJIAN_API_TOKEN="<TOKEN>"
 ```
 
 ## CORS 与 Origin
@@ -42,7 +43,7 @@ export TRACEMEMO_API_TOKEN="<TOKEN>"
 
 ## Token 不可用时
 
-如果系统安全存储不可用，API Token 会无法生成或读取，本地 API 会安全停用。先修复系统钥匙串/凭据服务，再回到 API Center 重试。不要手动编辑 `local-api-token.bin`。
+如果系统安全存储不可用，API Token 会无法生成或读取，本地 API 会安全停用。先修复系统钥匙串/凭据服务，再重启应用检查服务。当前界面没有 Token 恢复或轮换入口；未恢复有效授权前不要读取数据。不要手动编辑 `local-api-token.bin`。
 
 ## 相关文档
 

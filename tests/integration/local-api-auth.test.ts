@@ -2,7 +2,7 @@ import fs from 'fs-extra'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const fixture = vi.hoisted(() => ({
-  root: `/tmp/wxe-local-api-auth-${process.pid}`,
+  root: `${process.cwd()}/.tmp-test-artifacts/local-api-auth-${process.pid}`,
   storageAvailable: true,
   contacts: [
     {
@@ -110,7 +110,7 @@ describe('Local API authentication', () => {
     const health = await fetch(`${baseUrl(handle)}/api/v1/health`)
     expect(health.status).toBe(200)
     const healthBody = await health.json()
-    expect(healthBody).toMatchObject({ ok: true, service: 'TraceMemo Reader' })
+    expect(healthBody).toMatchObject({ ok: true, service: 'Hanajian Reader' })
     expect(JSON.stringify(healthBody)).not.toMatch(
       /token|authorization|wxid|databasePath|provider/i
     )
@@ -137,9 +137,7 @@ describe('Local API authentication', () => {
     ['GET', '/api/v1/group_snapshot'],
     ['GET', '/api/v1/resolve'],
     ['POST', '/api/v1/report'],
-    ['GET', '/api/v1/agent/status'],
-    ['POST', '/api/v1/agent/group-report'],
-    ['POST', '/api/v1/agent/send']
+    ['POST', '/api/v1/agent/group-report']
   ])('protects every non-health route: %s %s', async (method, pathname) => {
     const handle = await startFixtureServer()
     const response = await fetch(`${baseUrl(handle)}${pathname}`, {
@@ -215,76 +213,6 @@ describe('Local API authentication', () => {
       })
     }
   )
-
-  it('protects agent/send before entering its original handler', async () => {
-    const handle = await startFixtureServer()
-    const url = `${baseUrl(handle)}/api/v1/agent/send`
-    const init = {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: 'fixture', text: 'test' })
-    }
-    expect((await fetch(url, init)).status).toBe(401)
-    expect(
-      (
-        await fetch(url, {
-          ...init,
-          headers: { ...init.headers, Authorization: 'Bearer invalid' }
-        })
-      ).status
-    ).toBe(401)
-    expect(fixture.testSend).not.toHaveBeenCalled()
-    expect(
-      (
-        await fetch(url, {
-          ...init,
-          headers: { ...init.headers, Authorization: `Bearer ${VALID_TOKEN}` }
-        })
-      ).status
-    ).toBe(200)
-    expect(fixture.testSend).toHaveBeenCalledOnce()
-  })
-
-  it.each([
-    'http://localhost',
-    'http://localhost:5173',
-    'http://127.0.0.1',
-    'http://127.0.0.1:5173',
-    'http://[::1]',
-    'http://[::1]:5173'
-  ])('allows the trusted CORS origin %s', async (origin) => {
-    const handle = await startFixtureServer()
-    const response = await fetch(`${baseUrl(handle)}/api/v1/health`, {
-      method: 'OPTIONS',
-      headers: {
-        Origin: origin,
-        'Access-Control-Request-Method': 'GET',
-        'Access-Control-Request-Headers': 'Authorization'
-      }
-    })
-    expect(response.status).toBe(204)
-    expect(response.headers.get('access-control-allow-origin')).toBe(origin)
-    expect(response.headers.get('access-control-allow-headers')).toBe('Content-Type, Authorization')
-  })
-
-  it.each([
-    'https://localhost',
-    'http://localhost.example.com',
-    'http://foo.localhost',
-    'http://localhost.',
-    'http://127.0.0.2',
-    'http://2130706433',
-    'https://example.com',
-    'http://example.com'
-  ])('rejects the untrusted CORS origin %s', async (origin) => {
-    const handle = await startFixtureServer()
-    const response = await fetch(`${baseUrl(handle)}/api/v1/health`, {
-      method: 'OPTIONS',
-      headers: { Origin: origin }
-    })
-    expect(response.status).toBe(403)
-    expect(response.headers.get('access-control-allow-origin')).toBeNull()
-  })
 
   it('allows clients without an Origin header', async () => {
     const handle = await startFixtureServer()

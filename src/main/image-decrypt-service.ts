@@ -1,3 +1,4 @@
+import { readAppEnv } from './app-env'
 import { basename, dirname, extname, join, resolve } from 'path'
 import { existsSync, readFileSync, statSync, readdirSync, promises as fsPromises } from 'fs'
 import crypto from 'crypto'
@@ -11,9 +12,7 @@ import { imageFileQuality, imageQualityRank } from '../shared/image-quality'
 import { loadSettings } from './services/settings-store'
 import { Wcdb4Client } from './wcdb4-client'
 
-const imageDecryptDebugEnabled =
-  process.env['TRACEMEMO_DEBUG_IMAGE'] === '1' ||
-  (!process.env['TRACEMEMO_DEBUG_IMAGE'] && process.env['WECHATEXPLORER_DEBUG_IMAGE'] === '1')
+const imageDecryptDebugEnabled = readAppEnv('DEBUG_IMAGE') === '1'
 const imageDecryptLog = (...args: unknown[]): void => {
   if (imageDecryptDebugEnabled) console.log(...args)
 }

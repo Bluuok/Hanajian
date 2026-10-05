@@ -2,7 +2,6 @@ import { createHash, randomUUID } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { dirname, join } from 'path'
 import {
-  NATIVE_FORWARD_UNAVAILABLE,
   validateTopicQuery,
   type TopicBundle,
   type TopicCenterState,
@@ -81,7 +80,10 @@ export class TopicCenterService {
           ? { ...r, status: 'failed', message: '上次运行中断，请手动重试；未发送。' }
           : r
       ),
-      nativeForward: { supported: false, reason: NATIVE_FORWARD_UNAVAILABLE }
+      nativeForward: {
+        supported: false,
+        reason: '每日整理结果保存在本机，不连接机器人或向微信发送消息。'
+      }
     }
   }
   saveSubscription(
@@ -115,7 +117,7 @@ export class TopicCenterService {
       startClock: input.startClock,
       endClock: input.endClock,
       deliveryClock: input.deliveryClock,
-      recipient: input.recipient.trim(),
+      recipient: 'local',
       enabled: input.enabled
     }
     data.subscriptions = [...data.subscriptions.filter((s) => s.id !== rule.id), rule]
@@ -176,7 +178,7 @@ export class TopicCenterService {
           windowEnd: query.endTime,
           startedAt: now,
           status: 'running',
-          message: '正在整理本机消息，尚未投递'
+          message: '正在整理本机消息'
         }
         // Receipts outlive display history: repeated manual retries cannot evict
         // the deduplication record and accidentally restart a completed window.
@@ -197,8 +199,8 @@ export class TopicCenterService {
             run.bundle = undefined
             throw new Error('微信账号已切换，本次结果已丢弃')
           }
-          run.status = 'blocked'
-          run.message = NATIVE_FORWARD_UNAVAILABLE
+          run.status = 'completed'
+          run.message = '话题整理完成，结果已保存在本机。'
         } catch (error) {
           run.status = 'failed'
           run.message = error instanceof Error ? error.message : '整理失败'

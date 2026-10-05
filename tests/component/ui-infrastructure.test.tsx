@@ -23,7 +23,7 @@ function ToastDemo(): React.ReactElement {
   )
 }
 
-describe('TraceMemo UI infrastructure', () => {
+describe('Hanajian UI infrastructure', () => {
   it('restores focus after a dialog is closed with Escape', async () => {
     const user = userEvent.setup()
     render(

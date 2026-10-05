@@ -27,19 +27,26 @@ export class StickerService {
     this.legacyCacheDir = path.join(os.homedir(), 'Documents', 'WechatExplorer', 'Emojis')
   }
 
-  async resolveSticker(cdnUrl?: string, md5?: string): Promise<StickerResult> {
+  async resolveSticker(
+    cdnUrl?: string,
+    md5?: string,
+    aesKey?: string,
+    encryptedUrl?: string
+  ): Promise<StickerResult> {
     const normalizedMd5 = this.normalizeMd5(md5)
     let url = String(cdnUrl || '').trim()
+    const encryptedDownloadUrl = String(encryptedUrl || '').trim()
+    const sourceUrl = url || encryptedDownloadUrl
 
     const cacheKey =
-      normalizedMd5 || (url ? crypto.createHash('md5').update(url).digest('hex') : '')
+      normalizedMd5 || (sourceUrl ? crypto.createHash('md5').update(sourceUrl).digest('hex') : '')
     if (cacheKey) {
-      const cached = await this.readCached(cacheKey)
+      const cached = await this.readCached(cacheKey, aesKey)
       if (cached) return { success: true, data: cached }
     }
 
     if (normalizedMd5 && this.wcdb4Client) {
-      const wechatCached = await this.readWechatEmoticonCache(normalizedMd5)
+      const wechatCached = await this.readWechatEmoticonCache(normalizedMd5, aesKey)
       if (wechatCached) return { success: true, data: wechatCached }
     }
 
@@ -50,42 +57,71 @@ export class StickerService {
       }
     }
 
-    if (!url) {
-      return { success: false, error: '未找到表情包 CDN URL' }
+    if (!url && !encryptedDownloadUrl) {
+      return {
+        success: false,
+        error: aesKey
+          ? '本地表情包缓存解密失败，且未找到可用下载地址'
+          : '未找到可用的表情图片或下载地址'
+      }
     }
 
-    const resolvedCacheKey = cacheKey || crypto.createHash('md5').update(url).digest('hex')
-
-    const pending = downloadCache.get(resolvedCacheKey)
+    const resolvedCacheKey =
+      cacheKey ||
+      crypto
+        .createHash('md5')
+        .update(url || encryptedDownloadUrl)
+        .digest('hex')
+    // Requests with different keys or fallback URLs must be able to retry independently.
+    const pendingKey = crypto
+      .createHash('sha256')
+      .update(JSON.stringify([resolvedCacheKey, url, encryptedDownloadUrl, aesKey || '']))
+      .digest('hex')
+    const pending = downloadCache.get(pendingKey)
     if (pending) return pending
 
-    const task = this.downloadToDataUrl(url, resolvedCacheKey)
-    downloadCache.set(resolvedCacheKey, task)
+    const task = this.downloadWithFallback(url, encryptedDownloadUrl, resolvedCacheKey, aesKey)
+    downloadCache.set(pendingKey, task)
     try {
       return await task
     } finally {
-      downloadCache.delete(resolvedCacheKey)
+      downloadCache.delete(pendingKey)
     }
   }
 
-  private async readCached(cacheKey: string): Promise<string | null> {
+  private async downloadWithFallback(
+    url: string,
+    encryptedUrl: string,
+    cacheKey: string,
+    aesKey?: string
+  ): Promise<StickerResult> {
+    let result: StickerResult = { success: false, error: '未找到表情包下载地址' }
+    for (const downloadUrl of new Set([url, encryptedUrl].filter(Boolean))) {
+      result = await this.downloadToDataUrl(downloadUrl, cacheKey, aesKey).catch((error) => ({
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      }))
+      if (result.success) return result
+    }
+    return result
+  }
+
+  private async readCached(cacheKey: string, aesKey?: string): Promise<string | null> {
     const extensions = ['.gif', '.png', '.webp', '.jpg', '.jpeg']
-    const cacheDirs = [
-      this.cacheDir,
-      this.legacyCacheDir
-    ]
+    const cacheDirs = [this.cacheDir, this.legacyCacheDir]
     for (const cacheDir of cacheDirs) {
       for (const ext of extensions) {
         const filePath = path.join(cacheDir, `${cacheKey}${ext}`)
         if (!fs.existsSync(filePath)) continue
         const buffer = await fs.readFile(filePath)
-        return this.toDataUrl(buffer, ext)
+        const decoded = this.decodeStickerBuffer(buffer, aesKey)
+        if (decoded) return this.toDataUrl(decoded.buffer, decoded.ext)
       }
     }
     return null
   }
 
-  private async readWechatEmoticonCache(md5: string): Promise<string | null> {
+  private async readWechatEmoticonCache(md5: string, aesKey?: string): Promise<string | null> {
     const accountRoot = this.wcdb4Client?.getAccountRoot()
     if (!accountRoot) return null
 
@@ -108,8 +144,9 @@ export class StickerService {
       const filePath = path.join(cacheRoot, month, 'Emoticon', prefix, md5)
       if (!fs.existsSync(filePath)) continue
       const buffer = await fs.readFile(filePath)
-      const ext = this.detectExtension(buffer) || '.gif'
-      return this.toDataUrl(buffer, ext)
+      const decoded = this.decodeStickerBuffer(buffer, aesKey)
+      if (!decoded) continue
+      return this.toDataUrl(decoded.buffer, decoded.ext)
     }
 
     return null
@@ -118,6 +155,7 @@ export class StickerService {
   private downloadToDataUrl(
     url: string,
     cacheKey: string,
+    aesKey?: string,
     redirectCount = 0
   ): Promise<StickerResult> {
     return new Promise((resolve) => {
@@ -131,7 +169,7 @@ export class StickerService {
         url,
         {
           headers: {
-            'User-Agent': 'Mozilla/5.0 MicroMessenger TraceMemo',
+            'User-Agent': 'Mozilla/5.0 MicroMessenger Hanajian',
             Referer: 'https://weixin.qq.com/'
           }
         },
@@ -140,7 +178,7 @@ export class StickerService {
           if (redirectUrl && [301, 302, 303, 307, 308].includes(Number(response.statusCode || 0))) {
             const nextUrl = new URL(redirectUrl, url).toString()
             response.resume()
-            this.downloadToDataUrl(nextUrl, cacheKey, redirectCount + 1).then(resolve)
+            this.downloadToDataUrl(nextUrl, cacheKey, aesKey, redirectCount + 1).then(resolve)
             return
           }
 
@@ -163,13 +201,21 @@ export class StickerService {
           const chunks: Buffer[] = []
           response.on('data', (chunk: Buffer) => chunks.push(chunk))
           response.on('end', async () => {
-            const buffer = Buffer.concat(chunks)
-            if (buffer.length === 0) {
+            const downloaded = Buffer.concat(chunks)
+            if (downloaded.length === 0) {
               resolve({ success: false, error: '表情包内容为空' })
               return
             }
 
-            const ext = this.detectExtension(buffer) || this.getExtFromUrl(url) || '.gif'
+            const decoded = this.decodeStickerBuffer(downloaded, aesKey)
+            if (!decoded) {
+              resolve({
+                success: false,
+                error: aesKey ? '表情包 AES 解密失败' : '下载内容不是可识别的表情图片'
+              })
+              return
+            }
+            const { buffer, ext } = decoded
             try {
               await fs.ensureDir(this.cacheDir)
               await fs.writeFile(path.join(this.cacheDir, `${cacheKey}${ext}`), buffer)
@@ -208,13 +254,36 @@ export class StickerService {
     return null
   }
 
-  private getExtFromUrl(url: string): string | null {
+  private decodeStickerBuffer(
+    input: Buffer,
+    aesKey?: string
+  ): { buffer: Buffer; ext: string } | null {
+    const plainExt = this.detectExtension(input)
+    if (plainExt) return { buffer: input, ext: plainExt }
+
+    const key = this.parseAesKey(aesKey)
+    if (!key || input.length === 0 || input.length % 16 !== 0) return null
     try {
-      const ext = path.extname(new URL(url).pathname).toLowerCase()
-      return ['.gif', '.png', '.webp', '.jpg', '.jpeg'].includes(ext) ? ext : null
+      const decipher = crypto.createDecipheriv('aes-128-ecb', key, null)
+      const buffer = Buffer.concat([decipher.update(input), decipher.final()])
+      const ext = this.detectExtension(buffer)
+      return ext ? { buffer, ext } : null
     } catch {
       return null
     }
+  }
+
+  private parseAesKey(value?: string): Buffer | null {
+    const raw = String(value || '').trim()
+    if (/^[a-f0-9]{32}$/i.test(raw)) return Buffer.from(raw, 'hex')
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(raw)) return null
+
+    const decoded = Buffer.from(raw, 'base64')
+    if (decoded.length === 16) return decoded
+    if (decoded.length === 32 && /^[a-f0-9]{32}$/i.test(decoded.toString('ascii'))) {
+      return Buffer.from(decoded.toString('ascii'), 'hex')
+    }
+    return null
   }
 
   private getUrlHost(url: string): string {

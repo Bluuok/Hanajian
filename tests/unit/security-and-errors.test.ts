@@ -53,7 +53,7 @@ describe('sticker HTTP failures', () => {
 })
 
 describe('personal WeChat runtime security invariants', () => {
-  it('waits for sender termination during application shutdown', () => {
+  it('closes platform browsers during shutdown without starting the personal sender', () => {
     const mainSource = readFileSync(resolve('src/main/index.ts'), 'utf8')
     const shutdownStart = mainSource.indexOf("app.on('before-quit'")
     const shutdownEnd = mainSource.indexOf('function showMainWindow', shutdownStart)
@@ -62,8 +62,9 @@ describe('personal WeChat runtime security invariants', () => {
     expect(shutdownStart).toBeGreaterThanOrEqual(0)
     expect(shutdownEnd).toBeGreaterThan(shutdownStart)
     expect(shutdownSource).toContain('await Promise.all([')
-    expect(shutdownSource).toContain('personalWechatSendService.terminate()')
-    expect(shutdownSource).not.toContain('personalWechatSendService.stop()')
+    expect(shutdownSource).toContain('closePlatformBrowsers()')
+    expect(mainSource).not.toContain('personalWechatSendService')
+    expect(mainSource).not.toContain("ipcMain.handle('wechat-personal:send'")
 
     const senderSource = readFileSync(
       resolve('src/main/services/personal-wechat-send-service.ts'),

@@ -82,7 +82,7 @@ export interface TopicRun {
   windowEnd: number
   query?: TopicQuery
   startedAt: number
-  status: 'running' | 'blocked' | 'failed'
+  status: 'running' | 'completed' | 'blocked' | 'failed'
   message: string
   bundle?: TopicBundle
 }

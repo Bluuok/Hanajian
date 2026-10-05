@@ -420,7 +420,7 @@ handle('key:getEnvironment', () => ({
   wechatVersion: '4.1.9.57',
   dataStructureVersion: settings.dbRoot === 'fixture-account' ? '微信 4.x（WCDB）' : '未检测到',
   dataDirectoryDetected: settings.dbRoot === 'fixture-account',
-  diagnosticSummary: 'TraceMemo: v2.2.0\n数据目录: 已检测到',
+  diagnosticSummary: 'Hanajian: v2.2.0\n数据目录: 已检测到',
   autoDetectSupported: true,
   wechatRunning: true,
   accountIdentified: connected,
@@ -796,15 +796,15 @@ handle('api:copyCurl', () => ({ success: true }))
 handle('api:skillStatus', () => ({
   available: true,
   version: 'v1.2',
-  filePath: '/fixture/tracememo-reader/SKILL.md',
-  directoryPath: '/fixture/tracememo-reader',
+  filePath: '/fixture/hanajian-reader/SKILL.md',
+  directoryPath: '/fixture/hanajian-reader',
   source: 'development',
-  githubUrl: 'https://example.test/tracememo-reader'
+  githubUrl: 'https://example.test/hanajian-reader'
 }))
 handle('api:readSkill', () => ({
   success: true,
   content:
-    '# TraceMemo Reader\n\n## 能力\n- 读取本地聊天记录\n- 导出群聊日报\n\n仅在用户授权后访问。'
+    '# Hanajian Reader\n\n## 能力\n- 读取本地聊天记录\n- 导出群聊日报\n\n仅在用户授权后访问。'
 }))
 handle('api:start', () => ({ running: true, host: settings.apiHost, port: settings.apiPort }))
 handle('api:stop', () => ({ running: false, host: settings.apiHost, port: settings.apiPort }))
@@ -832,6 +832,25 @@ handle('agent-hub:askLocal', (request) => ({
   success: true,
   answer: `测试 AI 已读取“${request.groupName}”：${request.question}`,
   toolCallCount: 1,
+  memoryDraft: request.memoryExtraction?.enabled
+    ? {
+        id: 'fixture-memory',
+        success: true,
+        title: '合成知识笔记',
+        markdown:
+          '# 合成知识笔记\n\n## 结论与方法\n\n1. **工具边界**\n\n只读工具用于查询。\n\n来源：测试成员，2026/10/3 10:00:00',
+        groupId: request.groupId,
+        groupName: request.groupName,
+        focus: request.memoryExtraction.focus,
+        writingStyle: request.memoryExtraction.writingStyle,
+        formatId: request.memoryExtraction.formatId,
+        generatedAt: fixtureNowMs,
+        sourceMessageCount: 12,
+        selectedMessageCount: 1,
+        professionalMessageCount: 1,
+        excludedMessageCount: 11
+      }
+    : undefined,
   bundle: request.topicQuery
     ? {
         id: 'fixture-topic',
@@ -858,6 +877,75 @@ handle('agent-hub:askLocal', (request) => ({
       }
     : undefined
 }))
+
+const fixtureKnowledgeDirectory = path.join(userData, 'knowledge-notes')
+handle('agent-hub:writeMemoryDraft', (request) => {
+  if (request.outputDirectory !== fixtureKnowledgeDirectory)
+    return { success: false, error: '测试目录无效' }
+  fs.mkdirSync(fixtureKnowledgeDirectory, { recursive: true })
+  const file = path.join(fixtureKnowledgeDirectory, '合成知识笔记.md')
+  fs.writeFileSync(file, request.draft.markdown, 'utf8')
+  return { success: true, path: file }
+})
+const fixturePlatformDirectory = path.join(userData, 'saved-media')
+const fixtureWork = {
+  platform: 'xiaohongshu',
+  id: 'fixture-note',
+  kind: 'images',
+  title: '合成收藏：本地笔记',
+  author: '测试作者',
+  sourceUrl: 'https://www.xiaohongshu.com/explore/6411cf99000000001300b6d9',
+  assets: [
+    {
+      id: 'image-1',
+      kind: 'image',
+      urls: [],
+      sourceField: 'fixture',
+      watermark: 'unknown',
+      watermarkEvidence: '合成测试数据',
+      previewUrl: imageData
+    }
+  ],
+  resolvedBy: 'http',
+  warnings: ['合成测试数据，未访问真实平台']
+}
+handle('platform-integration:parse', (shareText) =>
+  shareText.includes('xiaohongshu.com')
+    ? { success: true, work: fixtureWork, resultId: 'fixture-platform' }
+    : { success: false, code: 'INVALID_INPUT', error: '请输入抖音或小红书链接' }
+)
+handle('platform-integration:getSaveDirectory', () => ({
+  success: true,
+  directory: fixturePlatformDirectory
+}))
+handle('platform-integration:selectSaveDirectory', () => ({
+  success: true,
+  directory: fixturePlatformDirectory
+}))
+handle('platform-integration:getMarkdownDirectory', () => ({
+  success: true,
+  directory: fixtureKnowledgeDirectory
+}))
+handle('platform-integration:selectMarkdownDirectory', () => ({
+  success: true,
+  directory: fixtureKnowledgeDirectory
+}))
+handle('platform-integration:save', () => {
+  fs.mkdirSync(fixturePlatformDirectory, { recursive: true })
+  const file = path.join(fixturePlatformDirectory, '合成图片.png')
+  fs.copyFileSync(path.join(root, 'resources/icon.png'), file)
+  return { success: true, files: [file], directory: fixturePlatformDirectory }
+})
+handle('platform-integration:writeMarkdown', () => {
+  fs.mkdirSync(fixtureKnowledgeDirectory, { recursive: true })
+  const file = path.join(fixtureKnowledgeDirectory, '合成收藏.md')
+  fs.writeFileSync(
+    file,
+    '# 合成收藏\n\n[原文](https://www.xiaohongshu.com/explore/6411cf99000000001300b6d9)\n\n[图片](../saved-media/合成图片.png)',
+    'utf8'
+  )
+  return { success: true, file, directory: fixtureKnowledgeDirectory }
+})
 
 let topicSubscriptions = []
 let topicRuns = []
@@ -1278,7 +1366,7 @@ handle('image:testConfig', () => ({
   fileFound: true,
   decrypted: true,
   readable: true,
-  diagnosticLog: 'TraceMemo 图片解析测试日志（已脱敏）\n测试结果：成功（SUCCESS）'
+  diagnosticLog: 'Hanajian 图片解析测试日志（已脱敏）\n测试结果：成功（SUCCESS）'
 }))
 handle('image:clearConfig', () => {
   imageKeyConfigured = false

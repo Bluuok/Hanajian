@@ -116,7 +116,7 @@ export function AboutPage({
               ) : (
                 <span>
                   {update.status === 'downloaded' ? (
-                    `更新将在重启 TraceMemo 后生效。${update.isSimulation ? ' 当前为开发模拟模式。' : ''}`
+                    `更新将在重启 Hanajian 后生效。${update.isSimulation ? ' 当前为开发模拟模式。' : ''}`
                   ) : update.status === 'available' && update.delivery === 'release-page' ? (
                     <span className="grid gap-1">
                       <span>当前版本：v{update.currentVersion}</span>

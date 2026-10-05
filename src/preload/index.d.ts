@@ -1,3 +1,11 @@
+import type { AgentMemoryWriteRequest, AgentMemoryWriteResult } from '../shared/agent-memory'
+import type {
+  PlatformMarkdownResult,
+  PlatformDirectoryResult,
+  PlatformParseResult,
+  PlatformSaveRequest,
+  PlatformSaveResult
+} from '../shared/platform-integration'
 import { ElectronAPI } from '@electron-toolkit/preload'
 import type { TopicCenterState, TopicSubscription } from '../shared/topic-digest'
 import type {
@@ -60,26 +68,12 @@ import type {
   ImageInsight
 } from '../shared/image-insight'
 import type {
-  AgentHubActionResult,
   AgentHubLogEntry,
   AgentHubLocalAskRequest,
   AgentHubLocalAskResult,
   AgentHubPromptSettings,
-  AgentHubPromptSettingsResult,
-  AgentHubStatus
+  AgentHubPromptSettingsResult
 } from '../shared/agent-hub'
-import type {
-  PersonalWechatImageSelectionResult,
-  PersonalWechatVoiceSelectionResult,
-  PersonalWechatSendRequest,
-  PersonalWechatSendResult,
-  PersonalWechatSenderStatus
-} from '../shared/personal-wechat'
-import type {
-  PersonalWechatRuntimeDownloadResult,
-  PersonalWechatRuntimeProgressEvent,
-  PersonalWechatRuntimeStatus
-} from '../shared/personal-wechat-runtime'
 import type { AppLogEntry } from '../shared/app-log'
 import type {
   AppUpdateCheckResult,
@@ -363,7 +357,9 @@ declare global {
       ) => Promise<{ success: boolean; url?: string; poster?: string; error?: string }>
       getSticker: (
         cdnUrl?: string,
-        md5?: string
+        md5?: string,
+        aesKey?: string,
+        encryptedUrl?: string
       ) => Promise<{
         success: boolean
         data?: string
@@ -463,6 +459,19 @@ declare global {
       onWcdbChange: (callback: (payload: { type: string; json: string }) => void) => () => void
       onDbKeyStatus: (callback: (payload: { message: string }) => void) => () => void
       onImageKeyStatus: (callback: (payload: { message: string }) => void) => () => void
+      parsePlatformShare: (shareText: string) => Promise<PlatformParseResult>
+      savePlatformMedia: (request: PlatformSaveRequest) => Promise<PlatformSaveResult>
+      getPlatformSaveDirectory: () => Promise<PlatformDirectoryResult>
+      selectPlatformSaveDirectory: () => Promise<PlatformDirectoryResult>
+      getPlatformMarkdownDirectory: () => Promise<PlatformDirectoryResult>
+      selectPlatformMarkdownDirectory: () => Promise<PlatformDirectoryResult>
+      writePlatformMarkdown: (request: {
+        resultId: string
+        linkStyle?: 'markdown' | 'obsidian'
+      }) => Promise<PlatformMarkdownResult>
+      writeAgentHubMemoryDraft: (
+        request: AgentMemoryWriteRequest
+      ) => Promise<AgentMemoryWriteResult>
       getSettings: () => Promise<{
         settings: {
           dbRoot: string
@@ -595,21 +604,6 @@ declare global {
         sessionId: string,
         limit?: number
       ) => Promise<{ success: boolean; insights: ImageInsight[] }>
-      getPersonalWechatSenderStatus: () => Promise<PersonalWechatSenderStatus>
-      getPersonalWechatRuntimeStatus: () => Promise<PersonalWechatRuntimeStatus>
-      downloadPersonalWechatRuntime: () => Promise<PersonalWechatRuntimeDownloadResult>
-      cancelPersonalWechatRuntimeDownload: () => Promise<{ success: boolean }>
-      removePersonalWechatRuntime: () => Promise<PersonalWechatRuntimeStatus>
-      openPersonalWechatRuntimeDirectory: () => Promise<{ success: boolean; error?: string }>
-      onPersonalWechatRuntimeProgress: (
-        callback: (status: PersonalWechatRuntimeProgressEvent) => void
-      ) => () => void
-      rebindPersonalWechatSender: () => Promise<PersonalWechatSenderStatus>
-      selectPersonalWechatImage: () => Promise<PersonalWechatImageSelectionResult>
-      selectPersonalWechatVoice: () => Promise<PersonalWechatVoiceSelectionResult>
-      sendPersonalWechatMessage: (
-        request: PersonalWechatSendRequest
-      ) => Promise<PersonalWechatSendResult>
       getTopicCenter: () => Promise<TopicCenterState>
       generateTopicPackage: (request: TopicPackageRequest) => Promise<TopicPackageResult>
       locateTopicSource: (locator: TopicSourceLocator) => Promise<TopicSourceResult>
@@ -617,7 +611,6 @@ declare global {
         input: Omit<TopicSubscription, 'id' | 'createdAt'> & { id?: string }
       ) => Promise<TopicCenterState>
       runTopicSubscription: (id: string) => Promise<TopicCenterState>
-      getAgentHubStatus: () => Promise<AgentHubStatus>
       getAgentHubLogs: () => Promise<AgentHubLogEntry[]>
       clearAgentHubLogs: () => Promise<void>
       getAgentHubPromptSettings: () => Promise<AgentHubPromptSettings>
@@ -625,12 +618,6 @@ declare global {
         customInstructions: string
       ) => Promise<AgentHubPromptSettingsResult>
       askAgentHubLocal: (request: AgentHubLocalAskRequest) => Promise<AgentHubLocalAskResult>
-      startAgentHubLogin: () => Promise<AgentHubActionResult>
-      cancelAgentHubLogin: () => Promise<AgentHubActionResult>
-      reconnectAgentHub: () => Promise<AgentHubActionResult>
-      disconnectAgentHub: () => Promise<AgentHubActionResult>
-      selectAgentHubTestImage: () => Promise<{ canceled: boolean; path?: string }>
-      onAgentHubStatus: (callback: (status: AgentHubStatus) => void) => () => void
       onAgentHubLog: (callback: (entry: AgentHubLogEntry) => void) => () => void
     }
   }

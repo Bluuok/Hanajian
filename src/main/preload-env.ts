@@ -30,8 +30,11 @@ try {
   ])
 
   process.env.WCDB_RESOURCES_PATH = process.env.WCDB_RESOURCES_PATH || resourcesRoot
-  process.env.TRACEMEMO_PROJECT_NAME = process.env.TRACEMEMO_PROJECT_NAME || 'TraceMemo'
+  process.env.HANAJIAN_PROJECT_NAME = process.env.HANAJIAN_PROJECT_NAME || 'Hanajian'
+  // Native compatibility consumers still read the old variable.
+  process.env.TRACEMEMO_PROJECT_NAME =
+    process.env.TRACEMEMO_PROJECT_NAME || process.env.HANAJIAN_PROJECT_NAME
   prependPath(dllDirs.filter((dir) => fs.existsSync(dir)))
 } catch (error) {
-  console.error('[TraceMemo] failed to enforce local DLL priority:', error)
+  console.error('[Hanajian] failed to enforce local DLL priority:', error)
 }

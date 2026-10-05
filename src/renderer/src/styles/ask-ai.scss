@@ -409,6 +409,7 @@ body.ask-ai-is-resizing {
 }
 
 .ask-ai-composer {
+  flex: 0 0 auto;
   background: var(--wxex-bg-main);
   border-top: 1px solid var(--wxex-border);
   padding: 12px;
@@ -489,5 +490,221 @@ body.ask-ai-is-resizing {
   .ask-ai-chat-panel {
     grid-column: 3;
     border-left: 0;
+  }
+}
+
+.ask-ai-memory-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+  color: var(--wxex-text-secondary);
+  cursor: pointer;
+
+  input {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--wxex-brand);
+  }
+
+  span {
+    display: grid;
+    gap: 1px;
+  }
+
+  strong {
+    color: var(--wxex-text-primary);
+    font-size: 12px;
+  }
+
+  small {
+    color: var(--wxex-text-tertiary);
+    font-size: 10px;
+  }
+}
+.ask-ai-memory-config {
+  max-height: min(30vh, 270px);
+  overflow: auto;
+  margin: 0 0 10px;
+  border: 1px solid var(--tm-card-mint-border);
+  border-radius: 10px;
+  background: var(--tm-card-mint-bg);
+  padding: 10px;
+
+  summary {
+    color: var(--wxex-text-secondary);
+    font-size: 11px;
+    font-weight: 650;
+    cursor: pointer;
+  }
+
+  label {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  label > span {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--wxex-text-secondary);
+    font-size: 11px;
+    font-weight: 650;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 64px;
+    max-height: 180px;
+    font-size: 12px;
+  }
+  select {
+    width: 100%;
+    padding: 8px;
+    border-radius: var(--wxex-radius-md);
+    border: 1px solid var(--wxex-border);
+    background: var(--wxex-bg-elevated);
+    color: var(--wxex-text-primary);
+  }
+
+  > p {
+    margin: 8px 0 0;
+    color: var(--wxex-text-tertiary);
+    font-size: 10px;
+    line-height: 1.55;
+  }
+}
+
+.ask-ai-memory-directory {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+
+  > span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--wxex-text-secondary);
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  button {
+    flex: 0 0 auto;
+    height: 28px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+}
+
+.ask-ai-memory-draft {
+  margin: -2px 0 16px;
+  border: 1px solid var(--tm-card-mint-border);
+  border-radius: 12px;
+  background: var(--tm-card-mint-bg);
+  padding: 11px;
+}
+
+.ask-ai-memory-draft-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+
+  div {
+    min-width: 0;
+  }
+
+  span,
+  strong {
+    display: block;
+  }
+
+  span {
+    color: var(--tm-card-mint-badge);
+    font-size: 10px;
+    font-weight: 750;
+  }
+
+  strong {
+    margin-top: 3px;
+    overflow: hidden;
+    color: var(--wxex-text-primary);
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  em {
+    flex: 0 0 auto;
+    border-radius: 99px;
+    background: var(--wxex-bg-main);
+    padding: 3px 6px;
+    color: var(--wxex-text-tertiary);
+    font-size: 10px;
+    font-style: normal;
+  }
+}
+
+.ask-ai-memory-stats,
+.ask-ai-memory-warning,
+.ask-ai-memory-written,
+.ask-ai-memory-error {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.ask-ai-memory-stats {
+  color: var(--wxex-text-secondary);
+}
+
+.ask-ai-memory-warning {
+  color: #aa7116;
+}
+
+.ask-ai-memory-written {
+  overflow-wrap: anywhere;
+  color: var(--wxex-brand);
+}
+
+.ask-ai-memory-error {
+  color: #cf4e4e;
+}
+
+.ask-ai-memory-draft pre {
+  max-height: 260px;
+  overflow: auto;
+  margin: 9px 0 0;
+  border-radius: 8px;
+  border: 1px solid var(--tm-card-mint-border);
+  background: var(--wxex-bg-elevated);
+  padding: 9px;
+  color: var(--wxex-text-primary);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ask-ai-memory-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+
+  button {
+    height: 30px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+}
+
+@keyframes ask-ai-pulse {
+  to {
+    opacity: 0.35;
+    transform: scale(0.72);
   }
 }

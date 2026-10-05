@@ -16,7 +16,7 @@ docs/skill/setup-wechat-share-card/
 然后对 Agent 说：
 
 ```text
-请使用 setup-wechat-share-card Skill，帮我部署 TraceMemo 的实验性微信分享卡片服务。尽量自动完成，只在缺少必要信息时一次性问我。
+请使用 setup-wechat-share-card Skill，帮我部署 Hanajian 的实验性微信分享卡片服务。尽量自动完成，只在缺少必要信息时一次性问我。
 ```
 
 Agent 会自动：
@@ -29,7 +29,7 @@ Agent 会自动：
 - 写入 Worker Secret；
 - 根据你的域名生成本机 Worker 配置；
 - 部署 Worker并执行健康检查和微信签名检查；
-- 把上传密钥复制到剪贴板，供你粘贴到 TraceMemo。
+- 把上传密钥复制到剪贴板，供你粘贴到 Hanajian。
 
 Agent 无法替你创建微信测试号或决定使用哪个域名，因此通常只需要你提供：
 
@@ -40,9 +40,9 @@ Agent 无法替你创建微信测试号或决定使用哪个域名，因此通�
 
 真实配置保存在被 Git 忽略的本机 `.env` 中，不会写入 `.env.example`。不要把 `.env` 发给别人或提交到仓库。
 
-TraceMemo 可以把已经生成的群聊日报长图发布为一个临时网页，并在微信中分享成带有标题、描述和缩略图的卡片。
+Hanajian 可以把已经生成的群聊日报长图发布为一个临时网页，并在微信中分享成带有标题、描述和缩略图的卡片。
 
-TraceMemo **不提供公共卡片服务器**。使用该功能前，需要按照本文部署一套属于你自己的卡片服务。日报图片将上传到你自己的 Cloudflare R2，而不是上传到 TraceMemo 作者的服务器。
+Hanajian **不提供公共卡片服务器**。使用该功能前，需要按照本文部署一套属于你自己的卡片服务。日报图片将上传到你自己的 Cloudflare R2，而不是上传到 Hanajian 作者的服务器。
 
 ## 这个功能解决什么问题
 
@@ -60,7 +60,7 @@ TraceMemo **不提供公共卡片服务器**。使用该功能前，需要按照
 
 ```mermaid
 flowchart LR
-    A[TraceMemo 本机日报 PNG] -->|带 UPLOAD_TOKEN 上传| B[你的 Cloudflare Worker]
+    A[Hanajian 本机日报 PNG] -->|带 UPLOAD_TOKEN 上传| B[你的 Cloudflare Worker]
     B --> C[你的私有 R2 Bucket]
     B -->|AppID + AppSecret| D[微信公众平台接口]
     D -->|access_token 与 jsapi_ticket| B
@@ -69,7 +69,7 @@ flowchart LR
     F --> G[微信好友或群聊卡片]
 ```
 
-与 TraceMemo 的本地浏览能力不同，启用分享卡片后，当前日报长图、缩略图、卡片标题和描述会离开本机，上传到你控制的 Cloudflare 账号。
+与 Hanajian 的本地浏览能力不同，启用分享卡片后，当前日报长图、缩略图、卡片标题和描述会离开本机，上传到你控制的 Cloudflare 账号。
 
 ## 你需要准备什么
 
@@ -97,7 +97,7 @@ flowchart LR
 
 `UPLOAD_TOKEN` **不是从 Cloudflare 或微信后台领取的**，它是卡片服务部署者自己生成的一段随机密码。
 
-它用于保护 Worker 的上传接口：TraceMemo 上传日报时，会发送：
+它用于保护 Worker 的上传接口：Hanajian 上传日报时，会发送：
 
 ```http
 Authorization: Bearer <UPLOAD_TOKEN>
@@ -120,11 +120,11 @@ openssl rand -hex 32
 生成后，同一个值需要配置到两个地方：
 
 1. Cloudflare Worker Secret `UPLOAD_TOKEN`；
-2. TraceMemo“生成微信卡片”弹窗中的“上传密钥”。
+2. Hanajian“生成微信卡片”弹窗中的“上传密钥”。
 
 如果两边不一致，卡片服务会返回 HTTP 401 或“未授权”。
 
-TraceMemo 会使用 Electron `safeStorage` 将服务地址和上传密钥加密保存在本机。不要把密钥提交到 Git，也不要写入 `wrangler.jsonc`。
+Hanajian 会使用 Electron `safeStorage` 将服务地址和上传密钥加密保存在本机。不要把密钥提交到 Git，也不要写入 `wrangler.jsonc`。
 
 ### AppID 和 AppSecret 从哪里来
 
@@ -149,7 +149,7 @@ WECHAT_APP_SECRET
 - Worker 再使用 `access_token` 获取 `jsapi_ticket`；
 - 最后使用 `jsapi_ticket`、当前网页 URL、时间戳和随机串生成 JS-SDK 签名。
 
-AppSecret 只能保存在 Worker Secret 中。不要把它填写到 TraceMemo 的“上传密钥”输入框，不要发送给前端，也不要提交到仓库。怀疑泄露时，应立即在微信后台重置并更新 Worker Secret。
+AppSecret 只能保存在 Worker Secret 中。不要把它填写到 Hanajian 的“上传密钥”输入框，不要发送给前端，也不要提交到仓库。怀疑泄露时，应立即在微信后台重置并更新 Worker Secret。
 
 ### JS 接口安全域名是干什么的
 
@@ -328,7 +328,7 @@ Cloudflare Custom Domain 要求域名已经位于同一 Cloudflare 账号中。�
 
 更新 Secret 后，如果线上仍提示旧配置，可再执行一次完整部署。
 
-## 在 TraceMemo 中配置
+## 在 Hanajian 中配置
 
 生成一份日报后，点击“生成微信卡片（实验性）”。首次使用需要填写：
 
@@ -339,7 +339,7 @@ Cloudflare Custom Domain 要求域名已经位于同一 Cloudflare 账号中。�
 
 这里的“上传密钥”绝对不是微信 AppSecret。
 
-配置保存后，TraceMemo 会上传当前日报和缩略图，返回二维码。使用已经关注测试号的微信扫码，打开页面后再通过右上角菜单分享。
+配置保存后，Hanajian 会上传当前日报和缩略图，返回二维码。使用已经关注测试号的微信扫码，打开页面后再通过右上角菜单分享。
 
 ## 验证部署
 
@@ -377,7 +377,7 @@ signature
 
 ### HTTP 401 / 未授权
 
-TraceMemo 中保存的上传密钥与 Worker 的 `UPLOAD_TOKEN` 不一致。重新生成或重新配置时，必须同步更新两边。
+Hanajian 中保存的上传密钥与 Worker 的 `UPLOAD_TOKEN` 不一致。重新生成或重新配置时，必须同步更新两边。
 
 ### “微信 JS-SDK 尚未配置”
 

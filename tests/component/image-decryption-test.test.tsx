@@ -135,7 +135,7 @@ describe('ImageTestSection', () => {
             fileFound: true,
             decrypted: false,
             readable: false,
-            diagnosticLog: 'TraceMemo 图片解析测试日志（已脱敏）'
+            diagnosticLog: 'Hanajian 图片解析测试日志（已脱敏）'
           }
         }}
         batchTest={emptyBatchTest}

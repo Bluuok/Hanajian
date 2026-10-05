@@ -27,7 +27,7 @@ function environment(root: string, packaged: boolean) {
 
 function writeSkill(filePath: string): void {
   mkdirSync(dirname(filePath), { recursive: true })
-  writeFileSync(filePath, '# TraceMemo Reader\n', 'utf8')
+  writeFileSync(filePath, '# Hanajian Reader\n', 'utf8')
 }
 
 describe('Reader Skill resource resolution', () => {
@@ -38,7 +38,7 @@ describe('Reader Skill resource resolution', () => {
   it('finds the repository Skill from the current working directory in development', () => {
     const root = fixtureRoot()
     const runtime = environment(root, false)
-    const skillPath = join(runtime.cwd, 'docs', 'skill', 'tracememo-reader', 'SKILL.md')
+    const skillPath = join(runtime.cwd, 'docs', 'skill', 'hanajian-reader', 'SKILL.md')
     writeSkill(skillPath)
 
     expect(resolveSkillResourceStatus(runtime)).toMatchObject({
@@ -64,20 +64,43 @@ describe('Reader Skill resource resolution', () => {
       available: true,
       source: 'development',
       version: 'v1.2',
-      filePath: join(workspace, 'docs', 'skill', 'tracememo-reader', 'SKILL.md')
+      filePath: join(workspace, 'docs', 'skill', 'hanajian-reader', 'SKILL.md')
     })
   })
 
   it('uses the extraResources Skill directory in a packaged runtime', () => {
     const root = fixtureRoot()
     const runtime = environment(root, true)
-    const skillPath = join(runtime.resourcesPath, 'skill', 'tracememo-reader', 'SKILL.md')
+    const skillPath = join(runtime.resourcesPath, 'skill', 'hanajian-reader', 'SKILL.md')
     writeSkill(skillPath)
 
     expect(resolveSkillResourceStatus(runtime)).toMatchObject({
       available: true,
       source: 'bundled',
       filePath: skillPath
+    })
+  })
+
+  it('retains the TraceMemo directory when only the installed legacy bundle exists', () => {
+    const root = fixtureRoot()
+    const runtime = environment(root, true)
+    const skillPath = join(runtime.resourcesPath, 'skill', 'tracememo-reader', 'SKILL.md')
+    writeSkill(skillPath)
+    expect(resolveSkillResourceStatus(runtime)).toMatchObject({
+      available: true,
+      filePath: skillPath
+    })
+  })
+
+  it('prefers the current bundle when old and new Skill directories coexist', () => {
+    const root = fixtureRoot()
+    const runtime = environment(root, true)
+    const current = join(runtime.resourcesPath, 'skill', 'hanajian-reader', 'SKILL.md')
+    writeSkill(join(runtime.resourcesPath, 'skill', 'tracememo-reader', 'SKILL.md'))
+    writeSkill(current)
+    expect(resolveSkillResourceStatus(runtime)).toMatchObject({
+      available: true,
+      filePath: current
     })
   })
 

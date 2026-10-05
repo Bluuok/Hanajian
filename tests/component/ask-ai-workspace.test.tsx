@@ -56,10 +56,11 @@ const topicBundle: TopicBundle = {
   review: 'verified'
 }
 
-const renderWorkspace = (): ReturnType<typeof render> =>
+const renderWorkspace = (accountScope?: string): ReturnType<typeof render> =>
   render(
     <TooltipProvider>
       <AskAIWorkspace
+        accountScope={accountScope}
         contacts={[group]}
         selectedContact={group}
         messages={[]}
@@ -126,6 +127,23 @@ describe('AskAIWorkspace', () => {
     expect(
       screen.getByText('最近讨论了 Agent 工具设计，并确认所有工具保持只读。')
     ).toBeInTheDocument()
+  })
+
+  it('keeps histories separate for accounts with the same group identifier', async () => {
+    const user = userEvent.setup()
+    window.api = {
+      askAgentHubLocal: vi.fn().mockResolvedValue({ success: true, answer: '账号甲的讨论' })
+    } as typeof window.api
+    const accountA = renderWorkspace('account-a')
+    await user.type(screen.getByRole('textbox', { name: '向 AI 提问' }), '整理这次讨论')
+    await user.click(screen.getByRole('button', { name: '发送' }))
+    expect(await screen.findByText('账号甲的讨论')).toBeInTheDocument()
+    accountA.unmount()
+    const accountB = renderWorkspace('account-b')
+    expect(screen.queryByText('账号甲的讨论')).not.toBeInTheDocument()
+    accountB.unmount()
+    renderWorkspace('account-a')
+    expect(screen.getByText('账号甲的讨论')).toBeInTheDocument()
   })
 
   it('lets the user choose retention, clear history, and resize both side panels', async () => {
@@ -255,6 +273,25 @@ describe('AskAIWorkspace', () => {
     expect(composer).toHaveValue('中文输入')
   })
 
+  it('only labels a legacy blocked subscription as saved when its local bundle exists', async () => {
+    const user = userEvent.setup()
+    const center: TopicCenterState = {
+      ...emptyCenter,
+      runs: [
+        { id: 'blocked-empty', subscriptionId: 'legacy-1', windowEnd: 1_700_003_600, startedAt: 1_700_004_000_000, status: 'blocked', message: '旧任务没有本地话题包' },
+        { id: 'blocked-saved', subscriptionId: 'legacy-2', windowEnd: 1_700_003_600, startedAt: 1_700_004_000_000, status: 'blocked', message: '旧任务已留存本地话题包', bundle: topicBundle }
+      ]
+    }
+    window.api = { getTopicCenter: vi.fn().mockResolvedValue(center) } as typeof window.api
+    renderWorkspace()
+    await user.click(screen.getByRole('button', { name: '话题' }))
+    const unsaved = (await screen.findByText('旧任务没有本地话题包')).closest('article')!
+    const saved = screen.getByText('旧任务已留存本地话题包').closest('article')!
+    expect(within(unsaved).getByText('未保存')).toBeInTheDocument()
+    expect(within(unsaved).queryByText('已保存')).not.toBeInTheDocument()
+    expect(within(saved).getByText('已保存')).toBeInTheDocument()
+  })
+
   it('locates cited evidence and invalidates claims after manual selection changes', async () => {
     const user = userEvent.setup()
     const scrollIntoView = vi.fn()
@@ -274,8 +311,8 @@ describe('AskAIWorkspace', () => {
     renderWorkspace()
 
     await user.click(screen.getByRole('button', { name: '话题' }))
-    expect(await screen.findByText(/需要连接 Clawbot 后获取/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '保存订阅' })).toBeDisabled()
+    expect(await screen.findByText(/结果保存在本机，不需要机器人账号/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '保存订阅' })).toBeEnabled()
     await user.click(screen.getByRole('button', { name: '生成话题包' }))
     const preview = await screen.findByRole('region', { name: '话题包预览' })
     await user.click(within(preview).getByRole('button', { name: '定位证据 E1' }))
@@ -286,5 +323,68 @@ describe('AskAIWorkspace', () => {
       screen.getByText('候选消息已人工修改，原 AI 结论已失效。请重新生成话题包。')
     ).toBeInTheDocument()
     expect(screen.queryByText('确定采用手作方案。')).not.toBeInTheDocument()
+  })
+  it('previews an optional memory draft and writes it only after confirmation', async () => {
+    const user = userEvent.setup()
+    window.api = {
+      askAgentHubLocal: vi.fn().mockResolvedValue({
+        success: true,
+        answer: '本次讨论完成。',
+        memoryDraft: {
+          id: 'draft-1',
+          success: true,
+          title: 'Agent 工具设计要点',
+          markdown: '# Agent 工具设计要点\n\n- 查询工具应保持只读。',
+          groupId: 'fixture-group',
+          groupName: 'helson的agent学习群',
+          focus: '只保留 Agent 工程实践',
+          generatedAt: Date.now(),
+          sourceMessageCount: 20,
+          professionalMessageCount: 8,
+          excludedMessageCount: 12
+        }
+      }),
+      selectExportDirectory: vi.fn().mockResolvedValue({ canceled: false, path: 'D:\\记忆库' }),
+      writeAgentHubMemoryDraft: vi.fn().mockResolvedValue({
+        success: true,
+        path: 'D:\\记忆库\\Agent 工具设计要点.md'
+      })
+    } as typeof window.api
+
+    renderWorkspace()
+    await user.click(screen.getByRole('checkbox', { name: /提取专业记忆/ }))
+    const memoryFocusInput = screen.getByRole('textbox', { name: '记忆提取提示词' })
+    await user.clear(memoryFocusInput)
+    await user.type(memoryFocusInput, '只保留 Agent 工程实践')
+    await user.selectOptions(screen.getByRole('combobox', { name: '笔记格式' }), 'action-memory-v1')
+    await user.type(screen.getByRole('textbox', { name: '记忆表达风格' }), '简短条目')
+    await user.click(screen.getByRole('button', { name: '选择保存路径' }))
+    await user.type(screen.getByRole('textbox', { name: '向 AI 提问' }), '总结最近100条')
+    await user.click(screen.getByRole('button', { name: '发送' }))
+
+    expect(await screen.findByText('Agent 工具设计要点')).toBeInTheDocument()
+    expect(screen.getByText('记忆提取设置').closest('details')).not.toHaveAttribute('open')
+    expect(screen.getByText(/本次读取 20 条，沉淀内容引用 8 条消息/)).toBeInTheDocument()
+    const preview = screen.getByText(/# Agent 工具设计要点/)
+    expect(preview.textContent).toContain('- 来源群聊：helson的agent学习群')
+    expect(preview.textContent).toContain('- 草稿 ID：draft-1')
+    expect(preview.textContent).toContain('- 沉淀来源消息：8/20')
+    expect(preview.textContent).not.toContain('第一轮')
+    expect(window.api.writeAgentHubMemoryDraft).not.toHaveBeenCalled()
+    expect(window.api.askAgentHubLocal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        memoryExtraction: {
+          enabled: true,
+          focus: '只保留 Agent 工程实践',
+          formatId: 'action-memory-v1',
+          writingStyle: '简短条目'
+        }
+      })
+    )
+    await user.click(screen.getByRole('button', { name: '写入记忆库' }))
+    expect(window.api.writeAgentHubMemoryDraft).toHaveBeenCalledWith(
+      expect.objectContaining({ outputDirectory: 'D:\\记忆库' })
+    )
+    expect(await screen.findByText(/已写入：D:\\记忆库/)).toBeInTheDocument()
   })
 })

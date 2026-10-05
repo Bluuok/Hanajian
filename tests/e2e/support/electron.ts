@@ -72,7 +72,12 @@ export async function launchTestApp(
   await page.waitForLoadState('domcontentloaded')
   // Existing message-workspace suites opt into their original starting workspace;
   // topic-home suites explicitly exercise the new application landing page.
-  if (options.mode !== 'disconnected' && options.initialPage !== 'topics') {
+  if (
+    options.mode !== 'disconnected' &&
+    options.initialPage !== 'topics' &&
+    !options.updateSimulation &&
+    !options.unsignedMacUpdate
+  ) {
     await page
       .getByRole('navigation', { name: '一级导航' })
       .getByRole('button', { name: '问问 AI', exact: true })

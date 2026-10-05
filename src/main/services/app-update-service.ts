@@ -10,6 +10,7 @@ import type {
 } from '../../shared/app-update'
 import { APP_UPDATES_ENABLED, APP_UPDATE_RELEASES_URL } from '../../shared/app-update'
 import { isPackagedRuntime } from '../runtime-mode'
+import { readAppEnv } from '../app-env'
 
 const SIMULATION_VERSION = '2.0.0'
 const SIMULATION_TOTAL_BYTES = 60 * 1024 * 1024
@@ -49,10 +50,9 @@ export class AppUpdateService {
     this.currentVersion = options.currentVersion || (() => app.getVersion())
     this.packagedRuntime = options.packagedRuntime || isPackagedRuntime
     this.simulationEnabled =
-      options.simulationEnabled ??
-      (!app.isPackaged && process.env['TRACEMEMO_UPDATE_SIMULATION'] === 'true')
+      options.simulationEnabled ?? (!app.isPackaged && readAppEnv('UPDATE_SIMULATION') === 'true')
     const configuredDuration = Number(
-      options.simulationDurationMs ?? process.env['TRACEMEMO_UPDATE_SIMULATION_DURATION_MS']
+      options.simulationDurationMs ?? readAppEnv('UPDATE_SIMULATION_DURATION_MS')
     )
     this.simulationDurationMs = Number.isFinite(configuredDuration)
       ? Math.max(1_000, configuredDuration)
@@ -60,10 +60,9 @@ export class AppUpdateService {
     const platform = options.platform || process.platform
     const macAutoUpdateEnabled = options.macAutoUpdateEnabled ?? MAC_AUTO_UPDATE_ENABLED
     this.updatesEnabled = options.updatesEnabled ?? true
-    this.delivery =
-      !this.updatesEnabled
-        ? 'disabled'
-        : !this.simulationEnabled && platform === 'darwin' && !macAutoUpdateEnabled
+    this.delivery = !this.updatesEnabled
+      ? 'disabled'
+      : !this.simulationEnabled && platform === 'darwin' && !macAutoUpdateEnabled
         ? 'release-page'
         : 'automatic'
     this.broadcast = options.broadcast
@@ -79,6 +78,7 @@ export class AppUpdateService {
 
     autoUpdater.autoDownload = false
     autoUpdater.autoInstallOnAppQuit = this.delivery === 'automatic'
+    if (!this.updatesEnabled) return
     autoUpdater.on('checking-for-update', () =>
       this.setState({
         status: 'checking',

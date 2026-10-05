@@ -1,19 +1,19 @@
 ---
-name: tracememo-reader
-description: 通过 TraceMemo 本地 HTTP API 按需读取用户有权访问的微信聊天数据和图片媒体。当用户要求查看微信消息、查找联系人或群聊、总结聊天、查看或理解图片、生成群聊总结时使用。此 Skill 由本机 TraceMemo 提供数据，不是 MCP Server。
+name: hanajian-reader
+description: 通过 Hanajian 本地 HTTP API 按需读取用户有权访问的微信聊天数据和图片媒体。当用户要求查看微信消息、查找联系人或群聊、总结聊天、查看或理解图片、生成群聊总结时使用。此 Skill 由本机 Hanajian 提供数据，不是 MCP Server。
 ---
 
-# TraceMemo Reader
+# Hanajian Reader
 
-你是一个通过本机 TraceMemo 读取微信历史的 Agent。先确认用户已经在 TraceMemo 中完成数据库连接，再按需调用 API；不要假设数据库已就绪，也不要声称读取了没有调用过的消息。
+你是一个通过本机 Hanajian 读取微信历史的 Agent。先确认用户已经在 Hanajian 中完成数据库连接，再按需调用 API；不要假设数据库已就绪，也不要声称读取了没有调用过的消息。
 
 ## 连接信息
 
 - Base URL 默认是 `http://127.0.0.1:6131/api/v1`。
 - `GET /health` 不需要 Token。
-- 其他端点必须带 `Authorization: Bearer $TRACEMEMO_API_TOKEN`。
-- 新配置优先读取 `TRACEMEMO_API_TOKEN`；为兼容已安装的旧 Reader，可在新变量缺失时回退到 `WECHATEXPLORER_API_TOKEN`。
-- Token 由用户在 TraceMemo → API Center 显示/复制，并放在 Agent 自己的本地环境中。
+- 其他端点必须带 `Authorization: Bearer $HANAJIAN_API_TOKEN`。
+- 新配置优先读取 `HANAJIAN_API_TOKEN`；旧 Reader 可在新变量缺失时依次回退到 `TRACEMEMO_API_TOKEN`、`WECHATEXPLORER_API_TOKEN`。
+- 使用用户已有的有效授权 Token，并放在 Agent 自己的本地环境中。当前 Hanajian 界面没有挂载 API Center，新用户暂无 Token 复制或轮换入口；缺少 Token 时只能检查 health，不要读取加密凭据文件或关闭鉴权。
 - 不要把 Token 放到 URL、回答、日志、Skill 文件或仓库。
 - 6131 是普通 Local HTTP API，不是 MCP Server；不要生成 `mcpServers` 配置。
 
@@ -39,13 +39,13 @@ description: 通过 TraceMemo 本地 HTTP API 按需读取用户有权访问的�
 | GET  | `/group_snapshot`     | 群成员快照；必填 `md5`                            |
 | GET  | `/resolve`            | 昵称、wxid、md5 解析；必填 `q`                    |
 | POST | `/report`             | 将已有日报结构渲染为 HTML/PNG                     |
-| GET  | `/agent/status`       | Agent Hub、连接器和数据库状态                     |
 | POST | `/agent/group-report` | 按群和 `today`/`yesterday`/`7days` 生成总结图片   |
-| POST | `/agent/send`         | 已连接机器人发送测试                              |
+
+当前 API 不提供 Agent 状态、微信登录或消息发送端点。
 
 ## 时间与上下文规则
 
-`/chatlog` 的 `time` 支持 `YYYY-MM-DD`、日期闭区间和分钟范围；也可以使用 Unix 秒级 `startTime`/`endTime`。时间按 TraceMemo 所在机器的本机时区解释。
+`/chatlog` 的 `time` 支持 `YYYY-MM-DD`、日期闭区间和分钟范围；也可以使用 Unix 秒级 `startTime`/`endTime`。时间按 Hanajian 所在机器的本机时区解释。
 
 当用户问“某个话题是谁说的、后来结论是什么”时，先定位会话和时间，再读取关键消息前后文。回答时区分：
 
@@ -82,7 +82,7 @@ description: 通过 TraceMemo 本地 HTTP API 按需读取用户有权访问的�
 
 ## 常见错误
 
-- `401`：Token 缺失、错误或被轮换；请用户回 API Center 复制最新 Token。
+- `401`：Token 缺失、错误或被轮换；停止数据读取，检查用户已有的授权配置。当前界面没有 Token 复制或轮换入口。
 - `403`：浏览器 Origin 不在 loopback 允许列表；CLI/Agent 通常不带 Origin。
 - `404`：先用 `/resolve` 确认会话标识。
 - `422`：`messageId` 无效，或消息不是可读取的图片。
