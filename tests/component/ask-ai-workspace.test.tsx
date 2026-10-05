@@ -251,8 +251,8 @@ describe('AskAIWorkspace', () => {
         aliases: ['手作', '工艺'],
         excludes: ['招聘'],
         memberIds: ['wxid-a'],
-        startTime: Math.floor(new Date('2026-09-10T08:30:00').getTime() / 1000),
-        endTime: Math.floor(new Date('2026-09-10T09:45:00').getTime() / 1000),
+        startTime: Math.floor(new Date('2026-09-10T08:30:00+08:00').getTime() / 1000),
+        endTime: Math.floor(new Date('2026-09-10T09:45:00+08:00').getTime() / 1000),
         timezone: 'Asia/Shanghai'
       }
     })
