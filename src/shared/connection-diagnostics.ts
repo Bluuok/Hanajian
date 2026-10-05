@@ -4,7 +4,7 @@ export function buildSafeDiagnosticSummary(
   environment: Omit<DatabaseKeyEnvironment, 'diagnosticSummary'>
 ): string {
   return [
-    `TraceMemo: ${environment.appVersion}`,
+    `Hanajian: ${environment.appVersion}`,
     `操作系统: ${environment.osVersion}`,
     `微信客户端: ${environment.wechatVersion}`,
     `数据结构: ${environment.dataStructureVersion}`,

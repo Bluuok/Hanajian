@@ -46,7 +46,7 @@ export function ExportTaskCenter({
 
   const copyTaskLog = async (task: ExportTaskRecord): Promise<void> => {
     const log = [
-      'TraceMemo 导出任务日志',
+      'Hanajian 导出任务日志',
       `时间：${new Date(task.createdAt).toLocaleString('zh-CN')}`,
       `会话：${task.targetLabel}`,
       `格式：${task.format.toUpperCase()}`,

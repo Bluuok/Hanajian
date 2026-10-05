@@ -434,13 +434,13 @@ export function ExportWorkspace({
 
   const targetPath = exportAll
     ? format === 'html' && zip
-      ? `文稿/TraceMemo/导出/${outputName}.zip`
-      : `文稿/TraceMemo/导出/${outputName}/`
+      ? `文稿/Hanajian/导出/${outputName}.zip`
+      : `文稿/Hanajian/导出/${outputName}/`
     : format === 'html'
       ? zip
-        ? `文稿/TraceMemo/导出/${outputName}.zip`
-        : `文稿/TraceMemo/导出/${outputName}/`
-      : `文稿/TraceMemo/导出/${outputName}.${format === 'markdown' ? 'md' : format}`
+        ? `文稿/Hanajian/导出/${outputName}.zip`
+        : `文稿/Hanajian/导出/${outputName}/`
+      : `文稿/Hanajian/导出/${outputName}.${format === 'markdown' ? 'md' : format}`
 
   const selectedTargetPath = outputDirectory
     ? `${outputDirectory}/${outputName}${format === 'html' ? (zip ? '.zip' : '/') : `.${format === 'markdown' ? 'md' : format}`}`

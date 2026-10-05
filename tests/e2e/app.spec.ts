@@ -17,7 +17,7 @@ test('APP-01 first launch renders a usable connection screen without uncaught er
   fixture.page.on('pageerror', (error) => pageErrors.push(error))
   try {
     await fixture.setWindowContentSize({ width: 820, height: 600 })
-    await expect(fixture.page.getByRole('heading', { name: 'TraceDigest' })).toBeVisible()
+    await expect(fixture.page.getByRole('heading', { name: '花笺 · Hanajian' })).toBeVisible()
     await expect(fixture.page.getByRole('main')).not.toBeEmpty()
     expect(
       await fixture.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
@@ -118,13 +118,13 @@ test('KEY-03 changing one key does not invalidate archive data or unrelated sett
 
 test('NAV-01 NAV-02 every top-level page is unique and switchable', async () => {
   const fixture = await launchTestApp()
-  const labels = ['问问 AI', '日报', 'Clawbot', '导出', '设置']
+  const labels = ['话题整理', '问问 AI', '内容收藏', '日报', '助手设置', '导出', '设置']
   try {
     const navigation = fixture.page.getByRole('navigation', { name: '一级导航' })
     await expect(navigation).toBeVisible()
     for (const label of labels) {
-      await expect(navigation.getByRole('button', { name: label })).toHaveCount(1)
-      await navigation.getByRole('button', { name: label }).click()
+      await expect(navigation.getByRole('button', { name: label, exact: true })).toHaveCount(1)
+      await navigation.getByRole('button', { name: label, exact: true }).click()
       await expect(fixture.page.locator(`main.app-shell-main[aria-label="${label}"]`)).toBeVisible()
     }
     await expect(navigation.getByRole('button', { name: '问问微信' })).toHaveCount(0)
@@ -201,57 +201,14 @@ test('CHAT-01 archive More menu is keyboard-safe and keeps the page usable', asy
   }
 })
 
-test('CHAT-02 personal WeChat send dialog is keyboard-safe and fits the viewport', async () => {
-  test.skip(process.platform !== 'darwin', 'Personal WeChat sending is currently macOS-only')
-  const fixture = await launchTestApp()
-  const pageErrors: Error[] = []
-  fixture.page.on('pageerror', (error) => pageErrors.push(error))
-  try {
-    await fixture.setWindowContentSize({ width: 820, height: 600 })
-    await fixture.page.getByText('产品测试群', { exact: true }).click()
-    const trigger = fixture.page.getByRole('button', { name: '发送消息' })
-    await trigger.click()
-    const dialog = fixture.page.getByRole('dialog', { name: '产品测试群' })
-    await expect(dialog).toBeVisible()
-    const startSending = dialog.getByRole('button', { name: '开始发送' })
-    if (await startSending.isVisible()) await startSending.click()
-    expect(
-      await fixture.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
-    ).toBe(true)
-    expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
-      true
-    )
-    const bounds = await dialog.boundingBox()
-    expect(bounds).not.toBeNull()
-    expect(bounds!.y).toBeGreaterThanOrEqual(0)
-    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(600)
-    expect(pageErrors).toEqual([])
-
-    const imageMode = dialog.getByRole('radio', { name: '图片' })
-    const voiceMode = dialog.getByRole('radio', { name: '语音', exact: true })
-    await imageMode.focus()
-    await fixture.page.keyboard.press('ArrowRight')
-    await expect(voiceMode).toBeFocused()
-    await fixture.page.keyboard.press('Space')
-    await expect(voiceMode).toBeChecked()
-    expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
-      true
-    )
-
-    await fixture.page.keyboard.press('Escape')
-    await expect(dialog).toHaveCount(0)
-    await expect(trigger).toBeFocused()
-  } finally {
-    await fixture.close()
-  }
-})
-
 test('GUIDE-01 first-use welcome is keyboard-safe and fits the viewport', async () => {
   const fixture = await launchTestApp()
   const pageErrors: Error[] = []
   fixture.page.on('pageerror', (error) => pageErrors.push(error))
   try {
     await fixture.setWindowContentSize({ width: 1000, height: 650 })
+    await fixture.page.getByRole('navigation', { name: '一级导航' }).getByRole('button', { name: '设置', exact: true }).click()
+    await expect(fixture.page.locator('main.app-shell-main[aria-label="设置"]')).toBeVisible()
     const guideButton = fixture.page.getByRole('button', { name: '新手引导' })
     await guideButton.click()
     const dialog = fixture.page.getByRole('dialog', { name: '开始探索你的微信' })
@@ -265,50 +222,11 @@ test('GUIDE-01 first-use welcome is keyboard-safe and fits the viewport', async 
     await fixture.page.keyboard.press('Escape')
     await expect(dialog).toHaveCount(0)
     await expect(guideButton).toBeFocused()
-  } finally {
-    await fixture.close()
-  }
-})
 
-test('SETTINGS-01 supported WeChat versions dialog is keyboard-safe and fits the viewport', async () => {
-  test.skip(process.platform !== 'darwin', 'The personal WeChat runtime is currently macOS-only')
-  const fixture = await launchTestApp()
-  const pageErrors: Error[] = []
-  fixture.page.on('pageerror', (error) => pageErrors.push(error))
-  try {
-    await fixture.setWindowContentSize({ width: 820, height: 600 })
-    await fixture.page
-      .getByRole('navigation', { name: '一级导航' })
-      .getByRole('button', { name: '设置' })
-      .click()
-    await fixture.page.getByRole('button', { name: '文字转语音' }).click()
-
-    const trigger = fixture.page.getByRole('button', { name: '查看支持版本' })
-    await expect(trigger).toBeVisible()
-    await trigger.click()
-    const dialog = fixture.page.getByRole('dialog', { name: '支持的微信版本' })
-    await expect(dialog).toBeVisible()
-    await expect(dialog.getByText('4.1.6.12')).toBeVisible()
-    await expect(dialog.getByText('4.1.11.53')).toBeVisible()
-    expect(
-      await fixture.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
-    ).toBe(true)
-    expect(pageErrors).toEqual([])
-
-    await fixture.page.keyboard.press('Escape')
+    await guideButton.click()
+    await dialog.getByRole('button', { name: '查看聊天记录' }).click()
     await expect(dialog).toHaveCount(0)
-    await expect(trigger).toBeFocused()
-
-    const modelSelect = fixture.page.getByRole('combobox', { name: '合成模型' })
-    await modelSelect.scrollIntoViewIfNeeded()
-    await modelSelect.click()
-    await expect(fixture.page.getByRole('option', { name: 's2.1-pro', exact: true })).toBeVisible()
-    await fixture.page.keyboard.press('Escape')
-    await expect(modelSelect).toBeFocused()
-    await expect(fixture.page.getByRole('searchbox', { name: '按音色名称搜索' })).toBeDisabled()
-    expect(
-      await fixture.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
-    ).toBe(true)
+    await expect(fixture.page.locator('main.app-shell-main[aria-label="问问 AI"]')).toBeVisible()
     expect(pageErrors).toEqual([])
   } finally {
     await fixture.close()
@@ -323,7 +241,7 @@ test('SETTINGS-02 basic settings controls fit a narrow viewport and keep their s
     await fixture.setWindowContentSize({ width: 820, height: 600 })
     await fixture.page
       .getByRole('navigation', { name: '一级导航' })
-      .getByRole('button', { name: '设置' })
+      .getByRole('button', { name: '设置', exact: true })
       .click()
 
     await expect(fixture.page.getByRole('heading', { name: '账号与数据库' })).toBeVisible()
@@ -427,7 +345,7 @@ test('SETTINGS-03 database key actions keep destructive confirmation keyboard-sa
     await fixture.setWindowContentSize({ width: 820, height: 600 })
     await fixture.page
       .getByRole('navigation', { name: '一级导航' })
-      .getByRole('button', { name: '设置' })
+      .getByRole('button', { name: '设置', exact: true })
       .click()
     await fixture.page.getByRole('button', { name: '数据库密钥' }).click()
     await expect(fixture.page.getByRole('heading', { name: '数据库密钥' })).toBeVisible()
@@ -458,7 +376,7 @@ test('SETTINGS-04 image decryption controls keep filtering and selection keyboar
     await fixture.setWindowContentSize({ width: 820, height: 600 })
     await fixture.page
       .getByRole('navigation', { name: '一级导航' })
-      .getByRole('button', { name: '设置' })
+      .getByRole('button', { name: '设置', exact: true })
       .click()
     await fixture.page.getByRole('button', { name: '图片解密' }).click()
     await expect(fixture.page.getByRole('heading', { name: '图片解密', exact: true })).toBeVisible()
@@ -512,7 +430,7 @@ test('SETTINGS-05 AI model editor keeps provider and capability semantics', asyn
     await fixture.setWindowContentSize({ width: 820, height: 600 })
     await fixture.page
       .getByRole('navigation', { name: '一级导航' })
-      .getByRole('button', { name: '设置' })
+      .getByRole('button', { name: '设置', exact: true })
       .click()
     await fixture.page.getByRole('button', { name: 'AI 模型' }).click()
     await expect(fixture.page.getByRole('heading', { name: 'AI 模型' })).toBeVisible()
@@ -572,7 +490,7 @@ test('SETTINGS-07 voice recognition controls keep selection semantics at a narro
     await fixture.setWindowContentSize({ width: 820, height: 600 })
     await fixture.page
       .getByRole('navigation', { name: '一级导航' })
-      .getByRole('button', { name: '设置' })
+      .getByRole('button', { name: '设置', exact: true })
       .click()
     await fixture.page.getByRole('button', { name: '语音转文字' }).click()
     await expect(fixture.page.getByRole('heading', { name: '语音转文字' })).toBeVisible()
@@ -608,21 +526,20 @@ test('SETTINGS-07 voice recognition controls keep selection semantics at a narro
   }
 })
 
-test('AGENT-01 Clawbot controls stay usable in the offline narrow layout', async () => {
+test('AGENT-01 desktop assistant settings stay usable in the narrow layout', async () => {
   const fixture = await launchTestApp()
   const pageErrors: Error[] = []
   fixture.page.on('pageerror', (error) => pageErrors.push(error))
   try {
     await fixture.setWindowContentSize({ width: 820, height: 600 })
-    await fixture.page.getByRole('button', { name: 'Clawbot' }).click()
-    await expect(fixture.page.getByRole('heading', { name: 'Clawbot' })).toBeVisible()
-    await expect(fixture.page.getByText('Clawbot 未运行')).toBeVisible()
-    await expect(fixture.page.getByRole('button', { name: '扫码登录微信机器人' })).toBeDisabled()
+    await fixture.page.getByRole('button', { name: '助手设置', exact: true }).click()
+    await expect(fixture.page.getByRole('heading', { name: 'AI 助手设置' })).toBeVisible()
+    await expect(fixture.page.getByRole('button', { name: /扫码登录|连接机器人/ })).toHaveCount(0)
 
     const logSource = fixture.page.getByRole('combobox', { name: '筛选日志来源' })
     await logSource.scrollIntoViewIfNeeded()
     await logSource.click()
-    await expect(fixture.page.getByRole('option', { name: '微信连接器' })).toBeVisible()
+    await expect(fixture.page.getByRole('option', { name: '问问 AI', exact: true })).toBeVisible()
     await fixture.page.keyboard.press('Escape')
     await expect(logSource).toBeFocused()
     await expect(fixture.page.getByRole('button', { name: '复制日志' })).toBeDisabled()
@@ -756,8 +673,16 @@ test('LAYOUT-01 core workspaces fit a narrow desktop viewport without page error
   try {
     await fixture.setWindowContentSize({ width: 820, height: 600 })
     const navigation = fixture.page.getByRole('navigation', { name: '一级导航' })
-    for (const pageName of ['问问 AI', '日报', 'Clawbot', '导出', '设置']) {
-      await navigation.getByRole('button', { name: pageName }).click()
+    for (const pageName of [
+      '话题整理',
+      '问问 AI',
+      '内容收藏',
+      '日报',
+      '助手设置',
+      '导出',
+      '设置'
+    ]) {
+      await navigation.getByRole('button', { name: pageName, exact: true }).click()
       await expect(fixture.page.locator('main.app-shell-main')).not.toBeEmpty()
       expect(
         await fixture.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
@@ -972,7 +897,7 @@ test('PERF-01 repeated startup with 1500 sessions remains bounded and responsive
         expect(Date.now() - startedAt).toBeLessThan(10_000)
         await fixture.page
           .getByRole('navigation', { name: '一级导航' })
-          .getByRole('button', { name: '设置' })
+          .getByRole('button', { name: '设置', exact: true })
           .click()
         await expect(fixture.page.locator('main.app-shell-main[aria-label="设置"]')).toBeVisible()
       } finally {

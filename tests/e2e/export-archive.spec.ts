@@ -149,7 +149,28 @@ test('EXPORT-ARCHIVE-01 merged v2 archive is usable offline on desktop and mobil
     const extractedDir = join(fixtureRoot, 'extracted')
     await zipDirectory(outputDir, zipPath, '合并聊天档案')
     mkdirSync(extractedDir, { recursive: true })
-    execFileSync('unzip', ['-q', zipPath, '-d', extractedDir])
+    if (process.platform === 'win32') {
+      execFileSync(
+        'powershell.exe',
+        [
+          '-NoLogo',
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          'Expand-Archive -LiteralPath $env:HANAJIAN_TEST_ARCHIVE -DestinationPath $env:HANAJIAN_TEST_EXTRACTED -Force'
+        ],
+        {
+          env: {
+            ...process.env,
+            HANAJIAN_TEST_ARCHIVE: zipPath,
+            HANAJIAN_TEST_EXTRACTED: extractedDir
+          },
+          windowsHide: true
+        }
+      )
+    } else {
+      execFileSync('unzip', ['-q', zipPath, '-d', extractedDir])
+    }
     const offlineIndex = join(extractedDir, '合并聊天档案', 'index.html')
 
     await page.setViewportSize({ width: 1440, height: 900 })

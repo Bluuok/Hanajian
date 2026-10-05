@@ -1,106 +1,53 @@
+import { generateTopicBundle } from './topic-package-service'
+import { validateTopicQuery, formatTopicBundle } from '../../shared/topic-digest'
 import { app, BrowserWindow } from 'electron'
-import { ChildProcess, execFile, spawn } from 'child_process'
-import { randomBytes, timingSafeEqual } from 'crypto'
 import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'fs'
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'http'
-import { dirname, join } from 'path'
-import { promisify } from 'util'
+import { basename, dirname, isAbsolute, join, resolve } from 'path'
 import type {
-  AgentHubActionResult,
   AgentHubLogEntry,
   AgentHubLogLevel,
   AgentHubLogSource,
   AgentHubLocalAskRequest,
   AgentHubLocalAskResult,
   AgentHubPromptSettings,
-  AgentHubPromptSettingsResult,
-  AgentHubStatus
+  AgentHubPromptSettingsResult
 } from '../../shared/agent-hub'
+import type {
+  AgentMemoryDraft,
+  AgentMemorySourceMessage,
+  AgentMemoryWriteRequest,
+  AgentMemoryWriteResult
+} from '../../shared/agent-memory'
 import { AGENT_HUB_CUSTOM_INSTRUCTIONS_MAX_LENGTH } from '../../shared/agent-hub'
 import type { AIToolChatMessage } from '../../shared/ai-provider'
-import { loadSettings, updateSettings, type AppSettings } from './settings-store'
+import { loadSettings, updateSettings } from './settings-store'
 import { AIProviderService } from './ai-provider-service'
-import { isPackagedRuntime } from '../runtime-mode'
-import { getChatDb, isReady } from './chat-service'
+import { isReady, getCurrentAccountRoot } from './chat-service'
 import { AGENT_HUB_READ_TOOLS, executeAgentHubReadTool } from './agent-hub-read-tools'
 import { buildAgentHubSystemPrompt, normalizeAgentHubCustomInstructions } from './agent-hub-prompt'
-import { TOPIC_QUERY_TOOL } from './topic-digest-service'
-import { generateTopicBundle as buildTopicBundle } from './topic-package-service'
-import { formatTopicBundle } from '../../shared/topic-digest'
+import { AgentMemoryExtractionService } from './agent-memory-extraction-service'
+import { renderAgentMemoryExport } from '../../shared/agent-memory-format'
+import {
+  PLATFORM_AGENT_READ_TOOLS,
+  executePlatformAgentReadTool
+} from '../platform-integration/platform-agent-tools'
 
-const execFileAsync = promisify(execFile)
-const HEALTH_INTERVAL_MS = 5_000
-const HUB_ADDR = '127.0.0.1:5300'
-const HUB_HOST = '127.0.0.1'
-const HUB_PORT = 5300
-const CONNECTOR_ADDR = '127.0.0.1:18011'
 const MAX_LOG_ENTRIES = 800
 const MAX_AGENT_ROUNDS = 8
 const MAX_AGENT_TOOL_CALLS = 12
-
-interface InboundMessage {
-  account_id?: string
-  from_user_id?: string
-  message_id?: string | number
-  items?: Array<{ type?: number; text?: string }>
-}
-
 const agentAIProvider = new AIProviderService()
+const agentMemoryExtractionService = new AgentMemoryExtractionService(agentAIProvider)
 
-function resolveBundledBinary(
-  resourceSegments: string[],
-  executable: string,
-  packaged = isPackagedRuntime(),
-  platform = process.platform,
-  arch = process.arch
-): string {
-  const relativeSegments = [...resourceSegments, `${platform}-${arch}`, executable]
-  const packagedPath = join(process.resourcesPath, 'resources', ...relativeSegments)
-  const developmentPath = join(app.getAppPath(), 'resources', ...relativeSegments)
-  const candidates = packaged ? [packagedPath, developmentPath] : [developmentPath, packagedPath]
-  return candidates.find((candidate) => existsSync(candidate)) || candidates[0]
-}
-
-export function resolveWechatConnectorBinaryPath(
-  packaged = isPackagedRuntime(),
-  platform = process.platform,
-  arch = process.arch
-): string {
-  return resolveBundledBinary(
-    ['connectors', 'wechat'],
-    platform === 'win32' ? 'wechat-connector.exe' : 'wechat-connector',
-    packaged,
-    platform,
-    arch
-  )
-}
-
+/**
+ * Local, read-only AI assistant used by the “问问 AI” workspace.
+ *
+ * This service deliberately has no WeChat login, connector, HTTP webhook or
+ * message-sending code. It can read the opened local database and parse public
+ * Douyin shares. Only the platform UI can request user-confirmed file saves.
+ */
 class AgentHubService {
-  private hubServer: Server | null = null
-  private connectorChild: ChildProcess | null = null
-  private loginChild: ChildProcess | null = null
-  private stopping = false
-  private healthTimer: NodeJS.Timeout | null = null
   private logs: AgentHubLogEntry[] = []
   private nextLogId = 1
-  private readonly processedMessages = new Map<string, number>()
-  private readonly inboundToken =
-    process.env['AGENT_HUB_INBOUND_TOKEN'] || randomBytes(32).toString('hex')
-  private readonly connectorApiToken = randomBytes(32).toString('hex')
-  private status: AgentHubStatus = {
-    hub: 'offline',
-    connector: 'checking',
-    dataApi: 'checking',
-    updatedAt: Date.now()
-  }
-
-  async start(settings: AppSettings): Promise<boolean> {
-    void settings
-    this.stopping = false
-    const hubStarted = await this.startHub()
-    await this.initializeConnector()
-    return hubStarted
-  }
 
   getPromptSettings(): AgentHubPromptSettings {
     return {
@@ -133,10 +80,6 @@ class AgentHubService {
     return { success: true, settings: this.getPromptSettings() }
   }
 
-  getStatus(): AgentHubStatus {
-    return { ...this.status }
-  }
-
   getLogs(): AgentHubLogEntry[] {
     return [...this.logs]
   }
@@ -153,7 +96,12 @@ class AgentHubService {
 
   async askLocal(input: AgentHubLocalAskRequest): Promise<AgentHubLocalAskResult> {
     try {
-      if (!isReady()) throw new Error('TraceDigest 本地数据库尚未连接，请连接后再试')
+      if (!isReady()) throw new Error('花笺本地数据库尚未连接，请连接后再试')
+      const accountRoot = getCurrentAccountRoot()
+      if (input?.topicQuery) {
+        const bundle = await generateTopicBundle(validateTopicQuery(input.topicQuery))
+        return { success: true, answer: formatTopicBundle(bundle), bundle }
+      }
       const question = String(input?.question || '')
         .trim()
         .slice(0, 4000)
@@ -161,322 +109,126 @@ class AgentHubService {
       const groupName = String(input?.groupName || '').trim()
       if (!question) throw new Error('请输入想问的问题')
       if (!groupId || !groupName) throw new Error('请先选择一个群聊')
-      if (input.topicQuery) {
-        if (input.topicQuery.groupId !== groupId) throw new Error('话题条件与当前群聊不一致')
-        const bundle = await buildTopicBundle(input.topicQuery)
-        return { success: true, answer: formatTopicBundle(bundle), bundle }
-      }
 
-      const now = new Date()
-      const localTime = now.toLocaleString('zh-CN', { hour12: false })
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-      const messages: AIToolChatMessage[] = [
-        {
-          role: 'system',
-          content: buildAgentHubSystemPrompt(
-            localTime,
-            timezone,
-            loadSettings().agentHubCustomInstructions
-          )
-        },
-        ...(Array.isArray(input.history) ? input.history : [])
-          .slice(-12)
-          .map((message) => ({
-            role: message.role === 'assistant' ? ('assistant' as const) : ('user' as const),
-            content: String(message.content || '')
-              .trim()
-              .slice(0, 4000)
-          }))
-          .filter((message) => message.content),
-        {
-          role: 'user',
-          content: `当前界面已选择群聊“${groupName}”，其已确认的群聊 ID 是 ${groupId}。除非我明确指定其他群聊，否则问题都针对这个群；调用读取工具时可直接使用此 ID。\n\n我的问题：${question}`
-        }
-      ]
+      const requestedRecentCount = parseRequestedRecentMessageCount(question)
+      const exactReadRequirement = requestedRecentCount
+        ? `\n\n硬性读取要求：本次用户要求总结最近 ${requestedRecentCount} 条消息。你必须从本地数据库读取这 ${requestedRecentCount} 条，而不是根据聊天界面当前显示的消息数量作答。单次最多读 1000 条；超过 1000 条时优先使用 next_cursor 连续分页，累计读够后才可总结。若数据库实际不足 ${requestedRecentCount} 条，须明确说明实际读取数量。`
+        : ''
 
-      this.addLog('agent-hub', 'info', `问问 AI 开始处理群聊“${groupName}”的提问`)
-      const completed = await this.completeReadOnlyAgent(messages)
+      this.addLog('agent-hub', 'info', `开始处理群聊“${groupName}”的提问`)
+      const completed =
+        requestedRecentCount && isPlainRecentSummaryQuestion(question) && !input.history?.length
+          ? await this.summarizeRecentMessagesFromDatabase({
+              groupId,
+              groupName,
+              question,
+              requestedCount: requestedRecentCount,
+              accountRoot,
+              customInstructions: loadSettings().agentHubCustomInstructions
+            })
+          : await this.completeReadOnlyAgent(
+              this.buildToolAgentMessages({
+                input,
+                groupId,
+                groupName,
+                question,
+                exactReadRequirement
+              }),
+              accountRoot,
+              groupId
+            )
+      this.assertAccount(accountRoot)
       this.addLog(
         'agent-hub',
         'info',
-        `问问 AI 已完成（只读工具调用 ${completed.toolCallCount} 次）`
+        completed.toolCallCount
+          ? `处理完成（只读工具调用 ${completed.toolCallCount} 次）`
+          : `处理完成（直接从数据库读取 ${completed.sourceMessages.length} 条）`
       )
+      let memoryDraft: AgentMemoryDraft | undefined
+      if (input.memoryExtraction?.enabled) {
+        this.addLog('agent-hub', 'info', '开始生成记忆草稿：直接按提取要求筛选并整理沉淀内容')
+        memoryDraft = await agentMemoryExtractionService.createDraft({
+          groupId,
+          groupName,
+          sourceMessages: completed.sourceMessages,
+          options: input.memoryExtraction
+        })
+        this.assertAccount(accountRoot)
+        this.addLog(
+          'agent-hub',
+          memoryDraft.success ? 'info' : 'error',
+          memoryDraft.success
+            ? `记忆草稿已生成（引用 ${memoryDraft.selectedMessageCount ?? memoryDraft.professionalMessageCount} 条来源消息，尚未写入）`
+            : `记忆草稿生成失败：${memoryDraft.error || '未知错误'}`
+        )
+      }
       return {
         success: true,
         answer: this.formatAIReply(completed.answer.slice(0, 12000)),
-        toolCallCount: completed.toolCallCount
+        toolCallCount: completed.toolCallCount,
+        memoryDraft
       }
     } catch (error) {
       const message = this.errorMessage(error)
-      this.addLog('agent-hub', 'error', `问问 AI 失败：${message}`)
+      this.addLog('agent-hub', 'error', `处理失败：${message}`)
       return { success: false, error: message }
     }
   }
 
-  async testSend(input: { to?: string; text?: string; mediaUrl?: string }): Promise<{
-    success: boolean
-    status: 'sent' | 'token_expired' | 'connector_offline' | 'invalid_request' | 'send_failed'
-    message: string
-  }> {
-    const to = String(input.to || this.status.wechatUserId || '').trim()
-    const text = String(input.text || '').trim()
-    const mediaUrl = String(input.mediaUrl || '').trim()
-    if (!to || (!text && !mediaUrl)) {
-      return {
-        success: false,
-        status: 'invalid_request',
-        message: '请填写接收者以及文字或图片路径'
-      }
+  writeMemoryDraft(request: AgentMemoryWriteRequest): AgentMemoryWriteResult {
+    const draft = request?.draft
+    const outputDirectory = String(request?.outputDirectory || '').trim()
+    if (!draft?.success || !String(draft.markdown || '').trim()) {
+      return { success: false, error: '没有可写入的记忆草稿' }
+    }
+    if (!outputDirectory || !isAbsolute(outputDirectory)) {
+      return { success: false, error: '请选择一个有效的绝对路径作为记忆库目录' }
     }
     try {
-      const response = await fetch(`http://${CONNECTOR_ADDR}/api/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.connectorApiToken}`
-        },
-        body: JSON.stringify({
-          account_id: this.status.accountId,
-          to,
-          text: text || undefined,
-          media_url: mediaUrl || undefined
-        }),
-        signal: AbortSignal.timeout(30_000)
-      })
-      const body = await response.text()
-      if (response.ok) {
-        this.addLog('system', 'info', 'API 页面发送测试成功')
-        return { success: true, status: 'sent', message: '发送成功' }
+      const root = resolve(outputDirectory)
+      mkdirSync(root, { recursive: true })
+      const fileBase = safeMemoryFilePart(draft.title || draft.groupName || '记忆')
+      const stamp = new Date(draft.generatedAt || Date.now())
+        .toISOString()
+        .replace(/[:.]/g, '-')
+        .replace('T', '_')
+        .replace('Z', '')
+      let filePath = join(root, `${fileBase}_${stamp}.md`)
+      let suffix = 2
+      while (existsSync(filePath)) {
+        filePath = join(root, `${fileBase}_${stamp}_${suffix}.md`)
+        suffix += 1
       }
-      const expired = /token|session|expired|unauthorized/i.test(body)
-      return {
-        success: false,
-        status: expired ? 'token_expired' : 'send_failed',
-        message: expired
-          ? '微信登录凭证已失效，请重新扫码登录'
-          : `发送失败：${body || response.status}`
-      }
-    } catch (error) {
-      return {
-        success: false,
-        status: 'connector_offline',
-        message: `微信连接器不可用：${error instanceof Error ? error.message : String(error)}`
-      }
-    }
-  }
-
-  async startLogin(): Promise<AgentHubActionResult> {
-    if (this.loginChild && this.loginChild.exitCode === null) {
-      return { success: true, status: this.getStatus() }
-    }
-    const executable = resolveWechatConnectorBinaryPath()
-    if (!existsSync(executable)) {
-      return this.fail(`微信连接器不存在：${executable}`)
-    }
-
-    this.stopConnector()
-    this.patchStatus({ connector: 'starting', qrCodeDataUrl: undefined, error: undefined })
-    const child = spawn(executable, ['login', '--json'], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      windowsHide: true
-    })
-    this.loginChild = child
-    this.addLog('wechat-connector', 'info', '已启动扫码登录流程')
-    let stdoutBuffer = ''
-    let stderr = ''
-
-    child.stdout?.on('data', (data: Buffer) => {
-      stdoutBuffer += data.toString()
-      const lines = stdoutBuffer.split(/\r?\n/)
-      stdoutBuffer = lines.pop() || ''
-      for (const line of lines) this.handleLoginEvent(line)
-    })
-    child.stderr?.on('data', (data: Buffer) => {
-      stderr += data.toString()
-      this.addProcessOutput('wechat-connector', 'warn', data.toString())
-    })
-    child.once('error', (error) => {
-      this.addLog('wechat-connector', 'error', `登录进程错误：${error.message}`)
-      this.patchStatus({ connector: 'error', error: error.message })
-    })
-    child.once('exit', (code) => {
-      if (this.loginChild === child) this.loginChild = null
-      if (
-        code !== 0 &&
-        this.status.connector !== 'online' &&
-        this.status.connector !== 'disconnected' &&
-        !this.stopping
-      ) {
-        this.patchStatus({ connector: 'error', error: stderr.trim() || `登录进程退出：${code}` })
-      }
-    })
-    return { success: true, status: this.getStatus() }
-  }
-
-  cancelLogin(): AgentHubActionResult {
-    if (this.loginChild && this.loginChild.exitCode === null) this.loginChild.kill()
-    this.loginChild = null
-    this.patchStatus({ connector: 'disconnected', qrCodeDataUrl: undefined, error: undefined })
-    return { success: true, status: this.getStatus() }
-  }
-
-  async reconnect(): Promise<AgentHubActionResult> {
-    const accounts = await this.loadAccounts()
-    if (accounts.length === 0) return this.startLogin()
-    this.startConnector(accounts.at(-1)!)
-    return { success: true, status: this.getStatus() }
-  }
-
-  disconnect(): AgentHubActionResult {
-    this.stopConnector()
-    this.patchStatus({ connector: 'disconnected', error: undefined })
-    return { success: true, status: this.getStatus() }
-  }
-
-  stop(): void {
-    this.stopping = true
-    this.clearHealthCheck()
-    if (this.loginChild && this.loginChild.exitCode === null) this.loginChild.kill()
-    this.loginChild = null
-    this.stopConnector()
-    const hubServer = this.hubServer
-    this.hubServer = null
-    hubServer?.close()
-    this.patchStatus({ hub: 'offline' })
-  }
-
-  private async startHub(): Promise<boolean> {
-    if (this.hubServer) return true
-    this.patchStatus({ hub: 'starting' })
-    const server = createServer((request, response) => {
-      void this.handleHubRequest(request, response).catch((error) => {
-        this.addLog('agent-hub', 'error', `请求处理失败：${this.errorMessage(error)}`)
-        this.sendHubJson(response, 500, { error: 'internal error' })
-      })
-    })
-    this.hubServer = server
-    return new Promise((resolve) => {
-      const fail = (error: Error): void => {
-        if (this.hubServer === server) this.hubServer = null
-        this.patchStatus({ hub: 'error', error: error.message })
-        this.addLog('agent-hub', 'error', `Clawbot 服务启动失败：${error.message}`)
-        resolve(false)
-      }
-      server.once('error', fail)
-      server.listen(HUB_PORT, HUB_HOST, () => {
-        server.off('error', fail)
-        server.on('error', (error) => {
-          this.patchStatus({ hub: 'error', error: error.message })
-          this.addLog('agent-hub', 'error', error.message)
-        })
-        this.patchStatus({ hub: 'online', error: undefined })
-        this.addLog('system', 'info', `Clawbot 本机服务已启动（${HUB_ADDR}）`)
-        this.scheduleHealthCheck()
-        resolve(true)
-      })
-    })
-  }
-
-  private async handleHubRequest(
-    request: IncomingMessage,
-    response: ServerResponse
-  ): Promise<void> {
-    const url = new URL(request.url || '/', `http://${HUB_ADDR}`)
-    if (request.method === 'GET' && url.pathname === '/health') {
-      return this.sendHubJson(response, 200, {
-        status: 'ok',
-        service: 'agent-hub',
-        runtime: 'typescript'
-      })
-    }
-    if (request.method !== 'POST' || url.pathname !== '/v1/connectors/wechat/inbound') {
-      return this.sendHubJson(response, 404, { error: 'not found' })
-    }
-    if (!this.authorized(request.headers.authorization)) {
-      return this.sendHubJson(response, 401, { error: 'unauthorized' })
-    }
-
-    let inbound: InboundMessage
-    try {
-      inbound = JSON.parse(await this.readHubBody(request)) as InboundMessage
-    } catch {
-      return this.sendHubJson(response, 400, { error: 'invalid request' })
-    }
-    const from = String(inbound.from_user_id || '').trim()
-    if (!from) return this.sendHubJson(response, 400, { error: 'from_user_id is required' })
-
-    const messageId = String(inbound.message_id || '')
-    this.cleanProcessedMessages()
-    if (messageId && this.processedMessages.has(messageId)) {
-      return this.sendHubJson(response, 200, { status: 'duplicate' })
-    }
-    const text = (inbound.items || [])
-      .filter((item) => item.type === 1 && item.text?.trim())
-      .map((item) => item.text!.trim())
-      .join(' ')
-    this.addLog('agent-hub', 'info', `收到微信消息 message_id=${messageId || 'unknown'}`)
-
-    if (!text.trim()) {
-      this.addLog('agent-hub', 'info', '消息已忽略：没有匹配到支持的意图')
-      return this.sendHubJson(response, 202, { status: 'ignored', reason: 'empty text' })
-    }
-    if (messageId) this.processedMessages.set(messageId, Date.now())
-    void this.runReadOnlySummaryAgent(inbound, text)
-    return this.sendHubJson(response, 202, { status: 'processing', mode: 'read-only-agent' })
-  }
-
-  private async runReadOnlySummaryAgent(inbound: InboundMessage, text: string): Promise<void> {
-    try {
-      if (!isReady()) {
-        await this.sendConnector(inbound, 'TraceDigest 本地数据库尚未连接，请连接后再试。')
-        return
-      }
-      await this.sendConnector(inbound, '收到，正在按你的要求读取群聊并总结…').catch(
-        () => undefined
-      )
-
-      const now = new Date()
-      const localTime = now.toLocaleString('zh-CN', { hour12: false })
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-      const messages: AIToolChatMessage[] = [
-        {
-          role: 'system',
-          content: buildAgentHubSystemPrompt(
-            localTime,
-            timezone,
-            loadSettings().agentHubCustomInstructions
-          )
-        },
-        { role: 'user', content: text.slice(0, 4000) }
-      ]
-
-      const completed = await this.completeReadOnlyAgent(messages)
-      await this.sendConnector(inbound, this.formatAIReply(completed.answer.slice(0, 6000)))
-      this.addLog('agent-hub', 'info', `只读总结已回复（工具调用 ${completed.toolCallCount} 次）`)
+      const markdown = this.memoryMarkdown(draft)
+      writeFileSync(filePath, markdown, { encoding: 'utf8', flag: 'wx' })
+      this.addLog('agent-hub', 'info', `记忆草稿已写入：${filePath}`)
+      return { success: true, path: filePath }
     } catch (error) {
       const message = this.errorMessage(error)
-      this.addLog('agent-hub', 'error', `只读总结失败：${message}`)
-      await this.sendConnector(inbound, `总结失败：${message}`).catch(() => undefined)
+      this.addLog('agent-hub', 'error', `写入记忆草稿失败：${message}`)
+      return { success: false, error: message }
     }
   }
 
   private async completeReadOnlyAgent(
-    messages: AIToolChatMessage[]
-  ): Promise<{ answer: string; toolCallCount: number }> {
+    messages: AIToolChatMessage[],
+    accountRoot: string,
+    groupId: string
+  ): Promise<{
+    answer: string
+    toolCallCount: number
+    sourceMessages: AgentMemorySourceMessage[]
+  }> {
     let toolCallCount = 0
-    let hasEvidence = false
-    let clarification = ''
-    const connection = getChatDb()
-    const checkConnection = (): void => {
-      if (!connection || getChatDb() !== connection) throw new Error('数据库连接已切换，请重新提问')
-    }
-    for (let round = 0; round < MAX_AGENT_ROUNDS; round++) {
-      checkConnection()
+    const sourceMessages: AgentMemorySourceMessage[] = []
+    for (let round = 0; round < MAX_AGENT_ROUNDS; round += 1) {
+      this.assertAccount(accountRoot)
       const result = await agentAIProvider.chatWithTools(messages, [
         ...AGENT_HUB_READ_TOOLS,
-        TOPIC_QUERY_TOOL
+        ...PLATFORM_AGENT_READ_TOOLS
       ])
-      checkConnection()
+      this.assertAccount(accountRoot)
       if (!result.success) throw new Error(result.error || 'AI 调用失败')
       const toolCalls = result.toolCalls || []
       messages.push({
@@ -486,42 +238,43 @@ class AgentHubService {
       })
 
       if (!toolCalls.length) {
-        if (!hasEvidence)
-          return {
-            answer:
-              clarification ||
-              '本次尚未读取到可用的聊天原文，不能给出事实性总结。请明确群名、话题和时间范围，或检查本机聊天数据是否已同步。',
-            toolCallCount
-          }
         const answer = String(result.content || '').trim()
         if (!answer) throw new Error('AI 没有返回总结')
-        return { answer, toolCallCount }
+        return { answer, toolCallCount, sourceMessages: dedupeMemorySourceMessages(sourceMessages) }
       }
 
       for (const call of toolCalls) {
+        this.assertAccount(accountRoot)
         toolCallCount += 1
         if (toolCallCount > MAX_AGENT_TOOL_CALLS) {
           throw new Error('本次读取步骤过多，请缩小群聊、时间或消息数量范围')
         }
         this.addLog('agent-hub', 'info', `AI 调用只读工具：${call.function.name}`)
-        if (call.function.name === TOPIC_QUERY_TOOL.function.name) {
-          const bundle = await buildTopicBundle(JSON.parse(call.function.arguments))
-          checkConnection()
-          return { answer: formatTopicBundle(bundle), toolCallCount }
+        let output: Record<string, unknown>
+        if (['parse_platform_share', 'parse_douyin_share'].includes(call.function.name)) {
+          output = await executePlatformAgentReadTool(call)
+        } else {
+          let selectedGroupOnly = true
+          if (
+            ['read_group_messages', 'read_group_member_messages', 'find_group_members'].includes(
+              call.function.name
+            )
+          ) {
+            try {
+              selectedGroupOnly = JSON.parse(call.function.arguments || '{}').group_id === groupId
+            } catch {
+              selectedGroupOnly = false
+            }
+          }
+          output = selectedGroupOnly
+            ? await executeAgentHubReadTool(call)
+            : {
+                ok: false,
+                error: '本次只允许读取当前选中的群聊；需要其他群聊时，请先切换群聊再提问。'
+              }
         }
-        const output = await executeAgentHubReadTool(call)
-        checkConnection()
-        const candidates = Array.isArray(output.groups)
-          ? output.groups
-          : Array.isArray(output.candidates)
-            ? output.candidates
-            : Array.isArray(output.members)
-              ? output.members
-              : []
-        if (candidates.length > 1)
-          clarification = `找到多个候选，请确认名称或 ID 后继续：\n${candidates.map((v) => JSON.stringify(v)).join('\n')}`
-        if (output.ok === true && Array.isArray(output.messages) && output.messages.length > 0)
-          hasEvidence = true
+        this.assertAccount(accountRoot)
+        sourceMessages.push(...readMemorySourceMessages(output))
         messages.push({
           role: 'tool',
           content: JSON.stringify(output),
@@ -530,6 +283,105 @@ class AgentHubService {
       }
     }
     throw new Error('本次读取步骤过多，请缩小群聊、时间或消息数量范围')
+  }
+
+  private buildToolAgentMessages(input: {
+    input: AgentHubLocalAskRequest
+    groupId: string
+    groupName: string
+    question: string
+    exactReadRequirement: string
+  }): AIToolChatMessage[] {
+    const now = new Date()
+    const localTime = now.toLocaleString('zh-CN', { hour12: false })
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    return [
+      {
+        role: 'system',
+        content: buildAgentHubSystemPrompt(
+          localTime,
+          timezone,
+          loadSettings().agentHubCustomInstructions
+        )
+      },
+      ...(Array.isArray(input.input.history) ? input.input.history : [])
+        .slice(-12)
+        .map((message) => ({
+          role: message.role === 'assistant' ? ('assistant' as const) : ('user' as const),
+          content: String(message.content || '')
+            .trim()
+            .slice(0, 4000)
+        }))
+        .filter((message) => message.content),
+      {
+        role: 'user',
+        content: `当前界面已选择群聊“${input.groupName}”，其已确认的群聊 ID 是 ${input.groupId}。本次只能读取这个群；调用读取工具时直接使用此 ID。如果问题需要其他群聊，请提示我先切换群聊。${input.exactReadRequirement}\n\n我的问题：${input.question}`
+      }
+    ]
+  }
+
+  private async summarizeRecentMessagesFromDatabase(input: {
+    groupId: string
+    groupName: string
+    question: string
+    requestedCount: number
+    accountRoot: string
+    customInstructions: unknown
+  }): Promise<{
+    answer: string
+    toolCallCount: number
+    sourceMessages: AgentMemorySourceMessage[]
+  }> {
+    this.addLog('agent-hub', 'info', `直接从数据库读取最近 ${input.requestedCount} 条消息…`)
+    const sources: AgentMemorySourceMessage[] = []
+    let cursor: string | undefined
+    while (sources.length < input.requestedCount) {
+      this.assertAccount(input.accountRoot)
+      const page = await executeAgentHubReadTool({
+        id: `recent-${sources.length}`,
+        type: 'function',
+        function: {
+          name: 'read_group_messages',
+          arguments: JSON.stringify({
+            group_id: input.groupId,
+            limit: Math.min(1000, input.requestedCount - sources.length),
+            before_cursor: cursor
+          })
+        }
+      })
+      this.assertAccount(input.accountRoot)
+      if (!page.ok) throw new Error(String(page.error || '读取群聊失败'))
+      const messages = readMemorySourceMessages(page)
+      sources.push(...messages)
+      const next = typeof page.next_cursor === 'string' ? page.next_cursor : undefined
+      if (!page.has_more || !messages.length || !next || next === cursor) break
+      cursor = next
+    }
+    const source = dedupeMemorySourceMessages(sources)
+    if (!source.length) throw new Error('该群聊没有可读取的消息')
+
+    this.addLog(
+      'agent-hub',
+      'info',
+      `数据库读取完成：${source.length}/${input.requestedCount} 条${source.length < input.requestedCount ? '（历史记录不足）' : ''}`
+    )
+
+    this.addLog('agent-hub', 'info', `正在将 ${source.length} 条消息一次性发送给模型总结…`)
+    const result = await agentAIProvider.chat([
+      { role: 'system', content: buildDirectSummaryPrompt(input.customInstructions) },
+      {
+        role: 'user',
+        content: `群聊：${input.groupName}\n用户问题：${input.question}\n实际从本地数据库读取：${source.length} 条消息${source.length < input.requestedCount ? `（用户要求 ${input.requestedCount} 条，但数据库只找到 ${source.length} 条）` : ''}。\n\n以下是聊天记录，请直接生成最终总结：\n\n${source.map((message) => `[${message.time}] ${message.sender}：${message.text}`).join('\n')}`
+      }
+    ])
+    if (!result.success || !String(result.data || '').trim()) {
+      throw new Error(result.error || '最终总结生成失败')
+    }
+    return {
+      answer: String(result.data).trim(),
+      toolCallCount: 0,
+      sourceMessages: source
+    }
   }
 
   private formatAIReply(content: string): string {
@@ -541,220 +393,18 @@ class AgentHubService {
       .trim()
   }
 
-  private async sendConnector(
-    inbound: InboundMessage,
-    text?: string,
-    mediaUrl?: string
-  ): Promise<void> {
-    const response = await fetch(`http://${CONNECTOR_ADDR}/api/send`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.connectorApiToken}`
-      },
-      body: JSON.stringify({
-        account_id: inbound.account_id,
-        to: inbound.from_user_id,
-        text,
-        media_url: mediaUrl
-      }),
-      signal: AbortSignal.timeout(mediaUrl ? 60_000 : 30_000)
-    })
-    if (!response.ok) throw new Error((await response.text()) || `HTTP ${response.status}`)
-  }
-
-  private authorized(header: string | undefined): boolean {
-    if (!header?.startsWith('Bearer ')) return false
-    const expected = Buffer.from(this.inboundToken)
-    const provided = Buffer.from(header.slice(7))
-    return expected.length === provided.length && timingSafeEqual(expected, provided)
-  }
-
-  private readHubBody(request: IncomingMessage): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const chunks: Buffer[] = []
-      let size = 0
-      request.on('data', (chunk: Buffer) => {
-        size += chunk.length
-        if (size > 1024 * 1024) {
-          reject(new Error('request too large'))
-          request.destroy()
-          return
-        }
-        chunks.push(chunk)
-      })
-      request.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
-      request.on('error', reject)
-    })
-  }
-
-  private sendHubJson(response: ServerResponse, status: number, payload: unknown): void {
-    if (response.writableEnded) return
-    response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' })
-    response.end(JSON.stringify(payload))
-  }
-
-  private cleanProcessedMessages(): void {
-    const cutoff = Date.now() - 10 * 60_000
-    for (const [id, timestamp] of this.processedMessages) {
-      if (timestamp < cutoff) this.processedMessages.delete(id)
+  private assertAccount(accountRoot: string): void {
+    if (!isReady() || getCurrentAccountRoot() !== accountRoot) {
+      throw new Error('微信账号已切换或数据库已断开，本次结果已丢弃，请重新提问')
     }
+  }
+
+  private memoryMarkdown(draft: AgentMemoryDraft): string {
+    return renderAgentMemoryExport(draft)
   }
 
   private errorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error)
-  }
-
-  private async initializeConnector(): Promise<void> {
-    this.patchStatus({ connector: 'checking' })
-    try {
-      const accounts = await this.loadAccounts()
-      if (accounts.length === 0) {
-        this.patchStatus({ connector: 'disconnected' })
-        return
-      }
-      this.startConnector(accounts.at(-1)!)
-    } catch (error) {
-      this.patchStatus({
-        connector: 'error',
-        error: error instanceof Error ? error.message : String(error)
-      })
-    }
-  }
-
-  private async loadAccounts(): Promise<{ accountId: string; wechatUserId: string }[]> {
-    const executable = resolveWechatConnectorBinaryPath()
-    if (!existsSync(executable)) throw new Error(`微信连接器不存在：${executable}`)
-    const { stdout } = await execFileAsync(executable, ['accounts', '--json'], {
-      windowsHide: true,
-      timeout: 10_000
-    })
-    const parsed = JSON.parse(stdout) as {
-      accounts?: { account_id: string; wechat_user_id: string }[]
-    }
-    return (parsed.accounts || []).map((account) => ({
-      accountId: account.account_id,
-      wechatUserId: account.wechat_user_id
-    }))
-  }
-
-  private startConnector(account: { accountId: string; wechatUserId: string }): void {
-    if (this.connectorChild && this.connectorChild.exitCode === null) return
-    const executable = resolveWechatConnectorBinaryPath()
-    this.patchStatus({
-      connector: 'starting',
-      accountId: account.accountId,
-      wechatUserId: account.wechatUserId,
-      qrCodeDataUrl: undefined,
-      error: undefined
-    })
-    const child = spawn(
-      executable,
-      ['start', '--foreground', '--api-addr', CONNECTOR_ADDR, '--account-id', account.accountId],
-      {
-        env: {
-          ...process.env,
-          WECHAT_CONNECTOR_API_TOKEN: this.connectorApiToken,
-          WECHAT_CONNECTOR_INBOUND_WEBHOOK_URL: `http://${HUB_ADDR}/v1/connectors/wechat/inbound`,
-          WECHAT_CONNECTOR_INBOUND_WEBHOOK_TOKEN: this.inboundToken,
-          WECHAT_CONNECTOR_INBOUND_WEBHOOK_ONLY: 'true'
-        },
-        stdio: ['ignore', 'pipe', 'pipe'],
-        windowsHide: true
-      }
-    )
-    this.connectorChild = child
-    this.addLog('system', 'info', `正在启动微信连接器（账号 ${account.accountId}）`)
-    child.stdout?.on('data', (data: Buffer) => this.handleConnectorOutput('info', data.toString()))
-    child.stderr?.on('data', (data: Buffer) => this.handleConnectorOutput('warn', data.toString()))
-    child.once('spawn', () => {
-      this.addLog('system', 'info', `微信连接器已启动（PID ${child.pid}）`)
-      this.patchStatus({ connector: 'online' })
-    })
-    child.once('error', (error) => {
-      this.addLog('wechat-connector', 'error', error.message)
-      this.patchStatus({ connector: 'error', error: error.message })
-    })
-    child.once('exit', (code) => {
-      if (this.connectorChild === child) this.connectorChild = null
-      this.addLog('system', code === 0 ? 'info' : 'error', `微信连接器已退出（code=${code}）`)
-      if (!this.stopping && this.status.connector !== 'disconnected') {
-        this.patchStatus({ connector: 'error', error: `微信连接器退出：${code}` })
-      }
-    })
-  }
-
-  private stopConnector(): void {
-    const child = this.connectorChild
-    this.connectorChild = null
-    if (child && child.exitCode === null) child.kill()
-  }
-
-  private handleLoginEvent(line: string): void {
-    if (!line.trim()) return
-    try {
-      const event = JSON.parse(line) as {
-        status: string
-        qr_code_data_url?: string
-        account_id?: string
-        wechat_user_id?: string
-      }
-      switch (event.status) {
-        case 'qrcode':
-        case 'wait':
-          this.patchStatus({
-            connector: 'waiting_scan',
-            qrCodeDataUrl: event.qr_code_data_url || this.status.qrCodeDataUrl
-          })
-          break
-        case 'scaned':
-          this.patchStatus({ connector: 'scanned' })
-          break
-        case 'confirmed':
-          this.patchStatus({ connector: 'starting' })
-          break
-        case 'expired':
-          this.patchStatus({ connector: 'error', error: '二维码已过期，请重新获取' })
-          break
-        case 'active': {
-          const account = {
-            accountId: event.account_id || '',
-            wechatUserId: event.wechat_user_id || ''
-          }
-          this.patchStatus({ ...account, connector: 'starting', qrCodeDataUrl: undefined })
-          this.startConnector(account)
-          break
-        }
-      }
-    } catch (error) {
-      console.warn('[AgentHub] invalid login event:', line, error)
-    }
-  }
-
-  private patchStatus(patch: Partial<AgentHubStatus>): void {
-    this.status = { ...this.status, ...patch, updatedAt: Date.now() }
-    for (const window of BrowserWindow.getAllWindows()) {
-      window.webContents.send('agent-hub:status', this.getStatus())
-    }
-  }
-
-  private addProcessOutput(
-    source: AgentHubLogSource,
-    level: AgentHubLogLevel,
-    output: string
-  ): void {
-    for (const line of output.split(/\r?\n/)) {
-      if (line.trim()) this.addLog(source, level, line)
-    }
-  }
-
-  private handleConnectorOutput(level: AgentHubLogLevel, output: string): void {
-    this.addProcessOutput('wechat-connector', level, output)
-    if (/session expired/i.test(output)) {
-      this.addLog('system', 'error', '当前微信机器人登录已失效，需要重新扫码登录')
-      this.patchStatus({ connector: 'error', error: '当前登录已失效，请重新扫码登录' })
-      this.stopConnector()
-    }
   }
 
   private addLog(source: AgentHubLogSource, level: AgentHubLogLevel, rawMessage: string): void {
@@ -770,15 +420,15 @@ class AgentHubService {
     this.logs.push(entry)
     if (this.logs.length > MAX_LOG_ENTRIES) this.logs.splice(0, this.logs.length - MAX_LOG_ENTRIES)
     try {
-      const path = this.logFilePath()
-      mkdirSync(dirname(path), { recursive: true })
+      const filePath = this.logFilePath()
+      mkdirSync(dirname(filePath), { recursive: true })
       appendFileSync(
-        path,
+        filePath,
         `${new Date(entry.timestamp).toISOString()} [${source}] [${level}] ${message}\n`,
         'utf8'
       )
     } catch {
-      // Do not interrupt message handling because log persistence failed.
+      // Logging must never interrupt a local question.
     }
     for (const window of BrowserWindow.getAllWindows()) {
       window.webContents.send('agent-hub:log', entry)
@@ -788,34 +438,78 @@ class AgentHubService {
   private redactLog(message: string): string {
     return message
       .replace(/Bearer\s+[A-Za-z0-9._~-]+/gi, 'Bearer [已隐藏]')
-      .replace(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/gi, 'data:image/[二维码已隐藏]')
       .replace(/(token[=:\s]+)[^\s,}]+/gi, '$1[已隐藏]')
   }
 
   private logFilePath(): string {
-    return join(app.getPath('logs'), 'agent-hub.log')
+    return join(app.getPath('logs'), 'ai-assistant.log')
   }
+}
 
-  private fail(error: string): AgentHubActionResult {
-    this.patchStatus({ connector: 'error', error })
-    return { success: false, status: this.getStatus(), error }
-  }
+function readMemorySourceMessages(output: Record<string, unknown>): AgentMemorySourceMessage[] {
+  const messages = output['messages']
+  if (!Array.isArray(messages)) return []
+  return messages.flatMap((value) => {
+    if (!value || typeof value !== 'object') return []
+    const message = value as Record<string, unknown>
+    const id = String(message['id'] || '').trim()
+    const text = String(message['text'] || '').trim()
+    if (!id || !text) return []
+    const unixTime = Number(message['unix_time'])
+    return [
+      {
+        id,
+        unixTime: Number.isFinite(unixTime) ? unixTime : undefined,
+        time: String(message['time'] || ''),
+        sender: String(message['sender'] || '未知成员'),
+        type: String(message['type'] || '消息'),
+        text
+      }
+    ]
+  })
+}
 
-  private scheduleHealthCheck(): void {
-    this.clearHealthCheck()
-    this.healthTimer = setInterval(() => this.checkDataApi(), HEALTH_INTERVAL_MS)
-    this.checkDataApi()
-  }
+function dedupeMemorySourceMessages(
+  messages: AgentMemorySourceMessage[]
+): AgentMemorySourceMessage[] {
+  const result = new Map<string, AgentMemorySourceMessage>()
+  for (const message of messages) result.set(message.id, message)
+  return [...result.values()].sort((left, right) => (left.unixTime || 0) - (right.unixTime || 0))
+}
 
-  private checkDataApi(): void {
-    const ready = isReady()
-    this.patchStatus({ dataApi: 'online', databaseReady: ready })
-  }
+function parseRequestedRecentMessageCount(question: string): number | null {
+  const match = String(question || '').match(/(?:最近|近)\s*(\d+)\s*条(?:消息|聊天记录)?/)
+  if (!match?.[1]) return null
+  const count = Number(match[1])
+  if (!Number.isFinite(count) || count > 5000)
+    throw new Error('单次最多总结 5000 条消息，请分段提问')
+  if (count < 1) return null
+  return Math.floor(count)
+}
 
-  private clearHealthCheck(): void {
-    if (this.healthTimer) clearInterval(this.healthTimer)
-    this.healthTimer = null
-  }
+function isPlainRecentSummaryQuestion(question: string): boolean {
+  // Only a whole-group count request can bypass the tools that apply member/time filters.
+  const normalized = String(question || '')
+    .replace(/\s+/g, '')
+    .replace(/[。！？.!?]+$/, '')
+  return /^(?:请)?(?:帮我)?(?:总结|汇总|概括|梳理|提炼)(?:一下)?(?:本群(?:聊)?的?)?(?:最近|近)\d+条(?:消息|聊天记录)?$/.test(
+    normalized
+  )
+}
+
+function buildDirectSummaryPrompt(customInstructions: unknown): string {
+  const custom = normalizeAgentHubCustomInstructions(customInstructions)
+  const customSection = custom ? `\n\n用户的总结偏好：\n${custom}` : ''
+  return `你是花笺的本地群聊总结助手。只根据提供的完整真实聊天记录回答，不要编造，不要输出 JSON、函数调用、工具参数或内部处理过程。请使用清晰的中文标题、分段和列表，优先写主要话题、结论、决定、待办和未解决问题；必要时注明发言人和时间。${customSection}`
+}
+
+function safeMemoryFilePart(value: string): string {
+  const safe = basename(String(value || '记忆'))
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\\/:*?"<>|\u0000-\u001F]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return (safe || '记忆').slice(0, 80)
 }
 
 export const agentHubService = new AgentHubService()

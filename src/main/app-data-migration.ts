@@ -578,7 +578,7 @@ async function createMigrationProgressWindow(): Promise<BrowserWindow | null> {
     minimizable: false,
     maximizable: false,
     closable: false,
-    title: 'TraceMemo 数据迁移',
+    title: '花笺数据迁移',
     backgroundColor: '#f5f5f7',
     webPreferences: {
       contextIsolation: true,
@@ -591,7 +591,7 @@ async function createMigrationProgressWindow(): Promise<BrowserWindow | null> {
 html,body{height:100%;margin:0}body{display:grid;place-items:center;background:#f5f5f7;color:#202124;font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center}
 main{width:360px}.spinner{width:30px;height:30px;margin:0 auto 20px;border:3px solid #d9dddf;border-top-color:#00796b;border-radius:50%;animation:spin .9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 h1{font-size:18px;margin:0 0 12px}p{line-height:1.6;margin:0}.hint{margin-top:14px;color:#697177;font-size:12px}
-</style></head><body><main><div class="spinner"></div><h1>正在迁移 WechatExplorer 数据</h1><p id="status">正在准备迁移…</p><p class="hint">请不要退出 TraceDigest。旧数据不会被删除。</p></main></body></html>`
+</style></head><body><main><div class="spinner"></div><h1>正在迁移 WechatExplorer 数据</h1><p id="status">正在准备迁移…</p><p class="hint">请不要退出花笺。旧数据不会被删除。</p></main></body></html>`
   await window.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
   window.setProgressBar(2, { mode: 'indeterminate' })
   window.show()
@@ -662,8 +662,8 @@ export async function runFirstLaunchMigration(roots: UserDataRoots): Promise<Mig
     title: '迁移 WechatExplorer 数据',
     message: '检测到 WechatExplorer 数据',
     detail:
-      `TraceMemo 可以从 ${sourceLabel} 迁移设置、Knowledge、本地索引、API Token、AI Provider、报告和 Agent 配置。` +
-      '\n\n迁移只复制缺失的用户资产，不会覆盖 TraceMemo 已有数据，也不会删除旧目录。' +
+      `花笺可以从 ${sourceLabel} 迁移设置、Knowledge、本地索引、API Token、AI Provider、报告和 Agent 配置。` +
+      '\n\n迁移只复制缺失的用户资产，不会覆盖花笺已有数据，也不会删除旧目录。' +
       conflictNote,
     buttons: ['立即迁移', '以后迁移'],
     defaultId: 0,
@@ -701,15 +701,15 @@ export async function runFirstLaunchMigration(roots: UserDataRoots): Promise<Mig
       now: () => new Date(),
       onProgress: (message) => updateMigrationProgress(progressWindow, message)
     })
-    updateMigrationProgress(progressWindow, '迁移完成，正在启动 TraceMemo…')
+    updateMigrationProgress(progressWindow, '迁移完成，正在启动花笺…')
     const messageBoxOptions = {
       type: execution.state.status === 'completed' ? ('info' as const) : ('warning' as const),
-      title: 'TraceMemo 数据迁移',
+      title: '花笺数据迁移',
       message:
         execution.state.status === 'completed' ? 'WechatExplorer 数据迁移完成' : '部分数据未能迁移',
       detail:
         execution.state.status === 'completed'
-          ? '核心用户资产已复制到 TraceMemo。旧目录仍完整保留。'
+          ? '核心用户资产已复制到花笺。旧目录仍完整保留。'
           : '旧目录没有被修改。请保留旧数据并在下次启动时重试；无法迁移的 API Token 不会被静默替换。',
       buttons: ['好']
     }

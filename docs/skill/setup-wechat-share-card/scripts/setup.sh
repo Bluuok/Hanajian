@@ -22,7 +22,7 @@ info() {
 }
 
 require_project() {
-  [[ -f "$BASE_CONFIG" ]] || fail "请在 TraceMemo 仓库根目录运行此脚本"
+  [[ -f "$BASE_CONFIG" ]] || fail "请在花笺 Hanajian 仓库根目录运行此脚本"
   [[ -f "$EXAMPLE_FILE" ]] || fail "缺少 .env.example"
 }
 

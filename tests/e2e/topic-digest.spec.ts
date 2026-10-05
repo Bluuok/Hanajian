@@ -30,7 +30,7 @@ test('topic query previews evidence and invalidates the summary after manual edi
       page.getByText('候选消息已人工修改，原 AI 结论已失效。请重新生成话题包。')
     ).toBeVisible()
     await expect(page.getByText('上线推迟到周六。', { exact: true })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: '保存订阅' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: '保存订阅' })).toBeEnabled()
     expect(errors).toEqual([])
   } finally {
     await fixture.close()

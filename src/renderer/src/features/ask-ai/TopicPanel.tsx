@@ -1,5 +1,4 @@
 import React from 'react'
-import type { AgentHubStatus } from '../../../../shared/agent-hub'
 import type {
   TopicBundle,
   TopicCenterState,
@@ -63,7 +62,6 @@ export function TopicPanel({
   const [busy, setBusy] = React.useState(false)
   const [error, setError] = React.useState('')
   const [center, setCenter] = React.useState<TopicCenterState | null>(null)
-  const [hubStatus, setHubStatus] = React.useState<AgentHubStatus | null>(null)
   const [subscriptionTopic, setSubscriptionTopic] = React.useState('craft')
   const [centerBusy, setCenterBusy] = React.useState(false)
   const evidenceRefs = React.useRef(new Map<string, HTMLElement>())
@@ -81,11 +79,11 @@ export function TopicPanel({
     if (!active) return
     let current = true
     const refresh = (): void => {
-      void Promise.all([window.api.getTopicCenter(), window.api.getAgentHubStatus()])
-        .then(([topicCenter, status]) => {
+      void window.api
+        .getTopicCenter()
+        .then((topicCenter) => {
           if (!current) return
           setCenter(topicCenter)
-          setHubStatus(status)
         })
         .catch(
           (cause) =>
@@ -188,8 +186,8 @@ export function TopicPanel({
   }
 
   const saveSubscription = async (): Promise<void> => {
-    const recipient = hubStatus?.wechatUserId
-    if (!recipient || !groupId || !subscriptionTopic.trim()) return
+    const recipient = 'local'
+    if (!groupId || !subscriptionTopic.trim()) return
     setCenterBusy(true)
     setError('')
     try {
@@ -495,13 +493,11 @@ export function TopicPanel({
               onChange={(event) => setSubscriptionTopic(event.target.value)}
             />
           </label>
-          <p>固定收件人：{hubStatus?.wechatUserId || '需要连接 Clawbot 后获取'}</p>
+          <p>结果保存在本机，不需要机器人账号</p>
           <button
             type="button"
             className="topic-primary"
-            disabled={
-              centerBusy || !hubStatus?.wechatUserId || !groupId || !subscriptionTopic.trim()
-            }
+            disabled={centerBusy || !groupId || !subscriptionTopic.trim()}
             onClick={() => void saveSubscription()}
           >
             保存订阅
@@ -513,9 +509,7 @@ export function TopicPanel({
             {center?.subscriptions.map((subscription) => (
               <article key={subscription.id}>
                 <strong>{subscriptionName(subscription)}</strong>
-                <p>
-                  {subscription.enabled ? '运行中' : '已暂停'} · 收件人 {subscription.recipient}
-                </p>
+                <p>{subscription.enabled ? '运行中' : '已暂停'} · 本机保存</p>
                 <div>
                   <button
                     type="button"
@@ -544,11 +538,13 @@ export function TopicPanel({
               .map((run) => (
                 <article key={run.id}>
                   <strong>
-                    {run.status === 'blocked'
-                      ? '投递已阻塞'
+                    {run.status === 'running'
+                      ? '正在运行'
                       : run.status === 'failed'
                         ? '运行失败'
-                        : '正在运行'}
+                        : run.bundle
+                          ? '已保存'
+                          : '未保存'}
                   </strong>
                   <time>{formatTime(Math.floor(run.startedAt / 1000))}</time>
                   <p>{run.message}</p>

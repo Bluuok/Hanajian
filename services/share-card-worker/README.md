@@ -1,4 +1,4 @@
-# WechatExplorer share-card worker
+# Hanajian share-card worker
 
 Cloudflare Worker + private R2 service for temporary WeChat report cards.
 
@@ -10,7 +10,9 @@ Required encrypted secrets:
 
 - `WECHAT_APP_ID`
 - `WECHAT_APP_SECRET`
-- `UPLOAD_TOKEN` (random 32+ character token also saved in WechatExplorer's secure settings)
+- `UPLOAD_TOKEN` (random 32+ character token also saved in Hanajian's secure settings)
+
+The existing `wechatexplorer-*` Worker/R2 identifiers remain compatible. These commands require explicit deployment authorization; this repair does not run them.
 
 Create the private bucket, set secrets, and deploy:
 

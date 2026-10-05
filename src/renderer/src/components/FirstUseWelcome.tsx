@@ -3,6 +3,7 @@ import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '.
 
 interface FirstUseWelcomeProps {
   onDismiss: () => void
+  onOpenChat: () => void
   onOpenReport: () => void
   onOpenAISettings: () => void
 }
@@ -12,6 +13,7 @@ const GUIDE_URL =
 
 export function FirstUseWelcome({
   onDismiss,
+  onOpenChat,
   onOpenReport,
   onOpenAISettings
 }: FirstUseWelcomeProps): React.ReactElement {
@@ -67,7 +69,7 @@ export function FirstUseWelcome({
         </Button>
 
         <div className="mt-3 flex flex-wrap gap-2">
-          <Button variant="ghost" size="sm" onClick={dismiss}>
+          <Button variant="ghost" size="sm" onClick={onOpenChat}>
             查看聊天记录
           </Button>
         </div>

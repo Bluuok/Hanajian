@@ -4,6 +4,8 @@ import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { DatabaseConnectionPage } from '../../src/renderer/src/components/DatabaseConnectionPage'
 import { TooltipProvider } from '../../src/renderer/src/components/ui'
+import { APP_BRAND } from '../../src/renderer/src/brand'
+import brandIcon from '../../src/renderer/src/assets/brand-icon.svg'
 
 function renderPage(
   overrides: Partial<ComponentProps<typeof DatabaseConnectionPage>> = {}
@@ -24,7 +26,7 @@ function renderPage(
       wechatVersion: '4.1.9.57',
       dataStructureVersion: '微信 4.x（WCDB）',
       dataDirectoryDetected: true,
-      diagnosticSummary: 'TraceMemo: v2.1.6',
+      diagnosticSummary: 'Hanajian: v2.1.6',
       autoDetectSupported: true,
       wechatRunning: true,
       accountIdentified: false,
@@ -77,6 +79,14 @@ function renderPage(
 }
 
 describe('DatabaseConnectionPage', () => {
+  it('uses the shared flower identity and tagline on the connection screen', () => {
+    const { container } = renderPage()
+    expect(screen.getByRole('heading', { name: APP_BRAND.name + ' · ' + APP_BRAND.englishName })).toBeInTheDocument()
+    expect(screen.getByText(APP_BRAND.tagline)).toBeInTheDocument()
+    expect(container.querySelector('.database-login-logo img')).toHaveAttribute('src', brandIcon)
+    expect(container.querySelector('.database-login-logo svg')).not.toBeInTheDocument()
+  })
+
   it('renders a discovered nickname and avatar before connection', () => {
     const { container } = renderPage({
       mode: 'automatic',

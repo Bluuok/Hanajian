@@ -4,10 +4,7 @@ import { ReportEmptyState } from './ReportEmptyState'
 import { ReportToolbar } from './ReportToolbar'
 import { ReportZoomBar } from './ReportZoomBar'
 import type { SelectableReportTemplateId } from '../../../../shared/report-templates'
-import type { Contact } from '../../../../shared/types'
 import { WechatShareCardDialog } from './WechatShareCardDialog'
-import { PersonalWechatSendDialog } from '../chat/PersonalWechatSendDialog'
-import { supportsPersonalWechatSend } from '../../utils/runtime-environment'
 
 interface ReportViewerProps {
   report: GeneratedReportRecord | null
@@ -20,8 +17,6 @@ interface ReportViewerProps {
     report: GeneratedReportRecord,
     templateId: SelectableReportTemplateId
   ) => Promise<{ success: boolean; error?: string }>
-  sendTarget?: Contact | null
-  personalWechatSendSupported?: boolean
 }
 
 const calculateFitZoom = (
@@ -48,9 +43,7 @@ export function ReportViewer({
   onRegenerate,
   onCopyImage,
   onReveal,
-  onSwitchTemplate,
-  sendTarget = null,
-  personalWechatSendSupported = supportsPersonalWechatSend
+  onSwitchTemplate
 }: ReportViewerProps): React.ReactElement {
   const [zoom, setZoom] = useState(1)
   const [fitZoom, setFitZoom] = useState(1)
@@ -58,7 +51,6 @@ export function ReportViewer({
   const [imageError, setImageError] = useState('')
   const [isSwitchingTemplate, setIsSwitchingTemplate] = useState(false)
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
-  const [sendDialogOpen, setSendDialogOpen] = useState(false)
   const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null)
   const viewportRef = useRef<HTMLDivElement>(null)
 
@@ -68,7 +60,6 @@ export function ReportViewer({
       setImageError('')
       setIsSwitchingTemplate(false)
       setShareDialogOpen(false)
-      setSendDialogOpen(false)
       setZoom(1)
       setFitZoom(1)
       setNaturalSize(null)
@@ -77,14 +68,6 @@ export function ReportViewer({
   }, [report?.id])
 
   const title = useMemo(() => (report ? `${report.contactName} 群聊日报` : 'AI 日报'), [report])
-  const sendToGroupHint = !personalWechatSendSupported
-    ? '仅支持 macOS'
-    : !sendTarget
-      ? '未找到这份日报对应的群聊'
-      : !report?.pngPath
-        ? '当前报告缺少可发送的 PNG 文件'
-        : '打开确认窗口，将日报图片发送到当前群聊'
-  const canSendToGroup = Boolean(personalWechatSendSupported && sendTarget && report?.pngPath)
 
   const measureFitZoom = (): number | null => {
     const viewport = viewportRef.current
@@ -186,8 +169,6 @@ export function ReportViewer({
           canCopyImage={Boolean(report.generatedImage)}
           canReveal={Boolean(report.pngPath || report.htmlPath)}
           canShare={Boolean(report.pngPath)}
-          canSendToGroup={canSendToGroup}
-          sendToGroupHint={sendToGroupHint}
           canSwitchTemplate={Boolean(
             (report.reportSnapshot && report.reportMetadata) ||
             report.reportRenderSnapshot ||
@@ -200,7 +181,6 @@ export function ReportViewer({
           onCopyImage={() => void handleCopy()}
           onReveal={() => void handleReveal()}
           onShare={() => setShareDialogOpen(true)}
-          onSendToGroup={() => setSendDialogOpen(true)}
         />
       </header>
       {status && <div className="report-viewer-status">{status}</div>}
@@ -264,18 +244,6 @@ export function ReportViewer({
           initialTitle={`${report.contactName}日报 · ${report.reportDate}`}
           initialDescription={`基于 ${report.messageCount} 条群聊消息生成的 AI 日报`}
           onClose={() => setShareDialogOpen(false)}
-        />
-      )}
-      {sendDialogOpen && report.pngPath && sendTarget && (
-        <PersonalWechatSendDialog
-          contact={sendTarget}
-          isGroupChat
-          initialMode="image"
-          initialImage={{
-            path: report.pngPath,
-            name: report.pngPath.split(/[\\/]/).pop() || '群聊日报.png'
-          }}
-          onClose={() => setSendDialogOpen(false)}
         />
       )}
     </main>

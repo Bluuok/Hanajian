@@ -4,6 +4,7 @@ import {
   roots as appDataRoots
 } from './app-data-bootstrap'
 import './preload-env'
+import { readAppEnv } from './app-env'
 import {
   app,
   shell,
@@ -16,7 +17,7 @@ import {
   dialog,
   protocol
 } from 'electron'
-import { basename, dirname, extname, join } from 'path'
+import { dirname, extname, join } from 'path'
 import { existsSync, promises as fsPromises } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -111,11 +112,13 @@ import {
 } from './services/bootstrap-cache'
 import { installSafeConsole } from './safe-log'
 import { agentHubService } from './services/agent-hub-service'
+import { platformIntegrationService } from './platform-integration/platform-integration-service'
+import { closePlatformBrowsers } from './platform-integration/douyin-browser'
+import { PlatformSaveController } from './platform-integration/platform-save-controller'
+import { PlatformMarkdownController } from './platform-integration/platform-markdown'
+import type { PlatformSaveRequest } from '../shared/platform-integration'
 import { TopicCenterService } from './services/topic-center-service'
 import { generateTopicBundle, topicPackageService } from './services/topic-package-service'
-import { personalWechatSendService } from './services/personal-wechat-send-service'
-import { PersonalWechatRuntimeManager } from './services/personal-wechat-runtime-manager'
-import type { PersonalWechatSendRequest } from '../shared/personal-wechat'
 import { TextToSpeechSettingsService } from './services/text-to-speech-settings-service'
 import type {
   ListTextToSpeechVoicesRequest,
@@ -125,7 +128,7 @@ import type {
 import { appLogger } from './app-logger'
 import { wcdbDebugLog } from './wcdb-debug'
 
-if (process.env.TRACEDIGEST_DISABLE_GPU === '1') {
+if (readAppEnv('DISABLE_GPU') === '1') {
   app.disableHardwareAcceleration()
 }
 
@@ -181,7 +184,6 @@ const databaseKeyStore = new DatabaseKeyStore()
 const imageKeyConfigService = new ImageKeyConfigService()
 const aiProviderService = new AIProviderService()
 const textToSpeechSettingsService = new TextToSpeechSettingsService()
-const personalWechatRuntimeManager = new PersonalWechatRuntimeManager()
 const keyServiceMac = new KeyServiceMac()
 const keyServiceWin = new KeyServiceWin()
 const wechatShareConfigStore = new WechatShareConfigStore()
@@ -318,6 +320,10 @@ const packagedIconPath = join(process.resourcesPath, 'resources', 'icon.png')
 const appIconPath = existsSync(packagedIconPath) ? packagedIconPath : icon
 
 protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'tracedigest-platform',
+    privileges: { secure: true, standard: true, stream: true, supportFetchAPI: true }
+  },
   {
     scheme: 'wxe-media',
     privileges: { secure: true, standard: true, stream: true, supportFetchAPI: true }
@@ -546,7 +552,7 @@ app.whenReady().then(async () => {
         scope: 'app-data-migration',
         message: migration.assessment.selection.legacyConflict
           ? '检测到两个独立的 legacy userData，已按兼容优先级选择 WechatExplorer 作为迁移源'
-          : 'TraceDigest 数据身份检查完成',
+          : 'Hanajian 数据身份检查完成',
         details: {
           action: migration.action,
           reason: migration.assessment.reason,
@@ -576,15 +582,15 @@ app.whenReady().then(async () => {
     appLogger.write({
       level: 'error',
       scope: 'app-data-migration',
-      message: 'TraceDigest 数据迁移初始化失败',
+      message: 'Hanajian 数据迁移初始化失败',
       details: { error: error instanceof Error ? error.message : String(error) }
     })
     await dialog.showMessageBox({
       type: 'warning',
-      title: 'TraceDigest 数据迁移',
+      title: 'Hanajian 数据迁移',
       message: '旧数据迁移未能启动',
       detail:
-        '旧目录没有被修改或删除。请保留 WechatExplorer 数据并重新启动 TraceDigest；旧 API Token 不会被静默替换。',
+        '旧目录没有被修改或删除。请保留 WechatExplorer 数据并重新启动 Hanajian；旧 API Token 不会被静默替换。',
       buttons: ['好']
     })
   }
@@ -615,11 +621,9 @@ app.whenReady().then(async () => {
       if (!window.isDestroyed()) window.webContents.send('voice:modelProgress', status)
     }
   })
-  personalWechatRuntimeManager.setProgressListener((status) => {
-    for (const window of BrowserWindow.getAllWindows()) {
-      if (!window.isDestroyed()) window.webContents.send('wechat-personal:runtimeProgress', status)
-    }
-  })
+  protocol.handle('tracedigest-platform', (request) =>
+    platformIntegrationService.mediaResponse(request)
+  )
   protocol.handle('wxe-media', async (request) => {
     const filePath = videoAssetService?.pathForUrl(request.url)
     if (!filePath) return new Response('Not found', { status: 404 })
@@ -630,11 +634,11 @@ app.whenReady().then(async () => {
       return new Response('Media unavailable', { status: 500 })
     }
   })
-  console.log(`TraceDigest main build: ${BUILD_MARK}`)
+  console.log(`Hanajian main build: ${BUILD_MARK}`)
   appLogger.write({
     level: 'info',
     scope: 'lifecycle',
-    message: 'TraceDigest 启动',
+    message: 'Hanajian 启动',
     details: { build: BUILD_MARK, platform: process.platform, version: app.getVersion() }
   })
   process.on('uncaughtException', (error) => {
@@ -1586,12 +1590,15 @@ app.whenReady().then(async () => {
     }
   )
 
-  ipcMain.handle('db:getSticker', async (_, cdnUrl?: string, md5?: string) => {
-    if (!stickerService) {
-      stickerService = new StickerService(chat.getChatDb()?.getWcdb4Client())
+  ipcMain.handle(
+    'db:getSticker',
+    async (_, cdnUrl?: string, md5?: string, aesKey?: string, encryptedUrl?: string) => {
+      if (!stickerService) {
+        stickerService = new StickerService(chat.getChatDb()?.getWcdb4Client())
+      }
+      return stickerService.resolveSticker(cdnUrl, md5, aesKey, encryptedUrl)
     }
-    return stickerService.resolveSticker(cdnUrl, md5)
-  })
+  )
 
   ipcMain.handle(
     'db:getVideo',
@@ -1784,8 +1791,6 @@ app.whenReady().then(async () => {
   ipcMain.handle('topic:locateSource', (_, locator) => topicPackageService.locate(locator))
   ipcMain.handle('topic:center', () => topicCenter.getState())
   ipcMain.handle('topic:saveSubscription', (_, input) => {
-    if (input.recipient !== agentHubService.getStatus().wechatUserId)
-      throw new Error('收件人必须是当前 Clawbot 已连接的本人账号')
     if (!chat.listContacts().some((c) => c.type === 'group' && c.md5 === input.query?.groupId))
       throw new Error('请先选择有效群聊')
     return topicCenter.saveSubscription(input)
@@ -1796,7 +1801,63 @@ app.whenReady().then(async () => {
   }, 60000)
   topicTimer.unref()
   app.once('before-quit', () => clearInterval(topicTimer))
-  ipcMain.handle('agent-hub:getStatus', () => agentHubService.getStatus())
+  ipcMain.handle('platform-integration:parse', (_, shareText: string) =>
+    platformIntegrationService.parseShare(shareText)
+  )
+  const platformSaves = new PlatformSaveController(
+    platformIntegrationService,
+    {
+      get: () => loadSettings().platformDownloadDirectory || '',
+      set: (directory) => {
+        saveSettings({ ...loadSettings(), platformDownloadDirectory: directory })
+      }
+    },
+    async (current) => {
+      const selection = await dialog.showOpenDialog({
+        title: '选择内容保存目录',
+        defaultPath: current,
+        properties: ['openDirectory', 'createDirectory']
+      })
+      return selection.canceled ? undefined : selection.filePaths[0]
+    }
+  )
+  ipcMain.handle('platform-integration:getSaveDirectory', () => platformSaves.getDirectory())
+  ipcMain.handle('platform-integration:selectSaveDirectory', () => platformSaves.selectDirectory())
+  ipcMain.handle('platform-integration:save', (_, request: PlatformSaveRequest) =>
+    platformSaves.save(request)
+  )
+  const platformMarkdownDirectories = new PlatformSaveController(
+    platformIntegrationService,
+    {
+      get: () => loadSettings().platformMarkdownDirectory || '',
+      set: (directory) => {
+        saveSettings({ ...loadSettings(), platformMarkdownDirectory: directory })
+      }
+    },
+    async (current) => {
+      const selection = await dialog.showOpenDialog({
+        title: '选择 Markdown 知识库目录',
+        defaultPath: current,
+        properties: ['openDirectory', 'createDirectory']
+      })
+      return selection.canceled ? undefined : selection.filePaths[0]
+    }
+  )
+  const platformMarkdown = new PlatformMarkdownController(
+    platformIntegrationService,
+    platformMarkdownDirectories
+  )
+  ipcMain.handle('platform-integration:getMarkdownDirectory', () =>
+    platformMarkdownDirectories.getDirectory()
+  )
+  ipcMain.handle('platform-integration:selectMarkdownDirectory', () =>
+    platformMarkdownDirectories.selectDirectory()
+  )
+  ipcMain.handle(
+    'platform-integration:writeMarkdown',
+    (_, request: { resultId: string; linkStyle?: 'markdown' | 'obsidian' }) =>
+      platformMarkdown.write(request)
+  )
   ipcMain.handle('agent-hub:getLogs', () => agentHubService.getLogs())
   ipcMain.handle('agent-hub:clearLogs', () => agentHubService.clearLogs())
   ipcMain.handle('agent-hub:getPromptSettings', () => agentHubService.getPromptSettings())
@@ -1804,74 +1865,9 @@ app.whenReady().then(async () => {
     agentHubService.savePromptSettings(customInstructions)
   )
   ipcMain.handle('agent-hub:askLocal', (_, request) => agentHubService.askLocal(request))
-  ipcMain.handle('agent-hub:startLogin', () => agentHubService.startLogin())
-  ipcMain.handle('agent-hub:cancelLogin', () => agentHubService.cancelLogin())
-  ipcMain.handle('agent-hub:reconnect', () => agentHubService.reconnect())
-  ipcMain.handle('agent-hub:disconnect', () => agentHubService.disconnect())
-  ipcMain.handle('wechat-personal:getStatus', () => personalWechatSendService.getStatus())
-  ipcMain.handle('wechat-personal:getRuntimeStatus', () => personalWechatRuntimeManager.getStatus())
-  ipcMain.handle('wechat-personal:downloadRuntime', () => personalWechatRuntimeManager.download())
-  ipcMain.handle('wechat-personal:cancelRuntimeDownload', () => ({
-    success: personalWechatRuntimeManager.cancelDownload()
-  }))
-  ipcMain.handle('wechat-personal:removeRuntime', async () => {
-    await personalWechatSendService.terminate()
-    return personalWechatRuntimeManager.remove()
-  })
-  ipcMain.handle('wechat-personal:openRuntimeDirectory', async () => {
-    const status = await personalWechatRuntimeManager.getStatus()
-    const directory = status.directory || personalWechatRuntimeManager.directory
-    await fsPromises.mkdir(directory, { recursive: true })
-    const error = await shell.openPath(directory)
-    return error ? { success: false, error } : { success: true }
-  })
-  ipcMain.handle('wechat-personal:rebind', () => personalWechatSendService.rebind())
-  ipcMain.handle('wechat-personal:send', (_, request: PersonalWechatSendRequest) =>
-    personalWechatSendService.send(request)
+  ipcMain.handle('agent-hub:writeMemoryDraft', (_, request) =>
+    agentHubService.writeMemoryDraft(request)
   )
-  ipcMain.handle('wechat-personal:selectImage', async (event) => {
-    const window = BrowserWindow.fromWebContents(event.sender)
-    const result = await dialog.showOpenDialog(window!, {
-      title: '选择要通过个人微信发送的图片',
-      properties: ['openFile'],
-      filters: [
-        { name: '图片', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] },
-        { name: '所有文件', extensions: ['*'] }
-      ]
-    })
-    if (result.canceled || !result.filePaths[0]) return { canceled: true }
-    return {
-      canceled: false,
-      path: result.filePaths[0],
-      name: basename(result.filePaths[0])
-    }
-  })
-  ipcMain.handle('wechat-personal:selectVoice', async (event) => {
-    const window = BrowserWindow.fromWebContents(event.sender)
-    const result = await dialog.showOpenDialog(window!, {
-      title: '选择要通过个人微信发送的语音',
-      properties: ['openFile'],
-      filters: [
-        { name: '语音', extensions: ['silk', 'mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'] },
-        { name: '所有文件', extensions: ['*'] }
-      ]
-    })
-    if (result.canceled || !result.filePaths[0]) return { canceled: true }
-    return { canceled: false, path: result.filePaths[0], name: basename(result.filePaths[0]) }
-  })
-  ipcMain.handle('agent-hub:selectTestImage', async (event) => {
-    const window = BrowserWindow.fromWebContents(event.sender)
-    const result = await dialog.showOpenDialog(window!, {
-      title: '选择要测试发送的图片',
-      properties: ['openFile'],
-      filters: [
-        { name: '图片', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] },
-        { name: '所有文件', extensions: ['*'] }
-      ]
-    })
-    return result.canceled ? { canceled: true } : { canceled: false, path: result.filePaths[0] }
-  })
-
   // 启动本地 HTTP API（由 settings.apiEnabled 控制）
   const settings = loadSettings()
   // v2.1.8 and earlier did not have an API token. Generate it once during
@@ -1880,8 +1876,6 @@ app.whenReady().then(async () => {
   if (settings.apiEnabled) {
     await apiServer.start(settings.apiHost, settings.apiPort)
   }
-
-  await agentHubService.start(settings)
 
   setupTray()
   if (TRAY_MODE) app.dock?.hide()
@@ -1917,16 +1911,13 @@ app.on('before-quit', (event) => {
   console.log('[Shutdown] cleanup started')
 
   void (async () => {
-    agentHubService.stop()
     flushBootstrapCacheWritesSync()
     const [, nativeCallsDrained] = await Promise.all([
       apiServer.stop().catch(() => undefined),
       chat.closeChatDbForQuit().catch(() => false),
       voiceRecognition?.dispose().catch(() => undefined),
       knowledgeSearchService?.dispose().catch(() => undefined),
-      personalWechatSendService.terminate().catch((error) => {
-        console.warn('[Shutdown] personal WeChat sender cleanup failed:', error)
-      })
+      closePlatformBrowsers().catch(() => undefined)
     ])
     if (!nativeCallsDrained) {
       console.warn('[Shutdown] WCDB async calls did not fully drain before quit')

@@ -82,7 +82,7 @@ export function DatabaseKeyDangerZone({
           <AlertDialogHeader>
             <AlertDialogTitle>确认清除数据库密钥？</AlertDialogTitle>
             <AlertDialogDescription>
-              清除后 TraceMemo
+              清除后 Hanajian
               将暂时无法读取聊天记录，需要重新输入或获取密钥。该操作不会删除微信原始数据。
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -107,7 +107,7 @@ export function DatabaseKeyDangerZone({
           <AlertDialogHeader>
             <AlertDialogTitle>返回登录界面？</AlertDialogTitle>
             <AlertDialogDescription>
-              TraceMemo
+              Hanajian
               将断开当前数据库连接并回到密钥输入界面。已保存的数据库密钥和微信原始数据不会被删除。
             </AlertDialogDescription>
           </AlertDialogHeader>

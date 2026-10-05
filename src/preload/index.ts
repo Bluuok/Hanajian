@@ -1,3 +1,11 @@
+import type { AgentMemoryWriteRequest, AgentMemoryWriteResult } from '../shared/agent-memory'
+import type {
+  PlatformMarkdownResult,
+  PlatformDirectoryResult,
+  PlatformParseResult,
+  PlatformSaveRequest,
+  PlatformSaveResult
+} from '../shared/platform-integration'
 import { contextBridge, ipcRenderer } from 'electron'
 import type { TopicCenterState, TopicSubscription } from '../shared/topic-digest'
 import type {
@@ -36,21 +44,8 @@ import type {
   AgentHubLocalAskRequest,
   AgentHubLocalAskResult,
   AgentHubPromptSettings,
-  AgentHubPromptSettingsResult,
-  AgentHubStatus
+  AgentHubPromptSettingsResult
 } from '../shared/agent-hub'
-import type {
-  PersonalWechatImageSelectionResult,
-  PersonalWechatVoiceSelectionResult,
-  PersonalWechatSendRequest,
-  PersonalWechatSendResult,
-  PersonalWechatSenderStatus
-} from '../shared/personal-wechat'
-import type {
-  PersonalWechatRuntimeDownloadResult,
-  PersonalWechatRuntimeProgressEvent,
-  PersonalWechatRuntimeStatus
-} from '../shared/personal-wechat-runtime'
 import type { AppLogEntry } from '../shared/app-log'
 import type { AppUpdateState } from '../shared/app-update'
 import type { CacheSummary } from '../shared/cache'
@@ -247,7 +242,8 @@ const api = {
       height?: number
     }
   ) => ipcRenderer.invoke('db:getVideo', hashes, options),
-  getSticker: (cdnUrl?: string, md5?: string) => ipcRenderer.invoke('db:getSticker', cdnUrl, md5),
+  getSticker: (cdnUrl?: string, md5?: string, aesKey?: string, encryptedUrl?: string) =>
+    ipcRenderer.invoke('db:getSticker', cdnUrl, md5, aesKey, encryptedUrl),
   startExport: (request: ExportRequest) => ipcRenderer.invoke('export:start', request),
   cancelExport: (jobId: string) => ipcRenderer.invoke('export:cancel', jobId),
   revealExport: (path: string) => ipcRenderer.invoke('export:reveal', path),
@@ -320,6 +316,25 @@ const api = {
     ipcRenderer.on('key:imageKeyStatus', listener)
     return () => ipcRenderer.removeListener('key:imageKeyStatus', listener)
   },
+  parsePlatformShare: (shareText: string): Promise<PlatformParseResult> =>
+    ipcRenderer.invoke('platform-integration:parse', shareText),
+  savePlatformMedia: (request: PlatformSaveRequest): Promise<PlatformSaveResult> =>
+    ipcRenderer.invoke('platform-integration:save', request),
+  getPlatformSaveDirectory: (): Promise<PlatformDirectoryResult> =>
+    ipcRenderer.invoke('platform-integration:getSaveDirectory'),
+  selectPlatformSaveDirectory: (): Promise<PlatformDirectoryResult> =>
+    ipcRenderer.invoke('platform-integration:selectSaveDirectory'),
+  getPlatformMarkdownDirectory: (): Promise<PlatformDirectoryResult> =>
+    ipcRenderer.invoke('platform-integration:getMarkdownDirectory'),
+  selectPlatformMarkdownDirectory: (): Promise<PlatformDirectoryResult> =>
+    ipcRenderer.invoke('platform-integration:selectMarkdownDirectory'),
+  writePlatformMarkdown: (request: {
+    resultId: string
+    linkStyle?: 'markdown' | 'obsidian'
+  }): Promise<PlatformMarkdownResult> =>
+    ipcRenderer.invoke('platform-integration:writeMarkdown', request),
+  writeAgentHubMemoryDraft: (request: AgentMemoryWriteRequest): Promise<AgentMemoryWriteResult> =>
+    ipcRenderer.invoke('agent-hub:writeMemoryDraft', request),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
   getSelf: () => ipcRenderer.invoke('settings:getSelf'),
@@ -364,37 +379,6 @@ const api = {
     limit?: number
   ): Promise<{ success: boolean; insights: ImageInsight[] }> =>
     ipcRenderer.invoke('image:listInsights', sessionId, limit),
-  getPersonalWechatSenderStatus: (): Promise<PersonalWechatSenderStatus> =>
-    ipcRenderer.invoke('wechat-personal:getStatus'),
-  getPersonalWechatRuntimeStatus: (): Promise<PersonalWechatRuntimeStatus> =>
-    ipcRenderer.invoke('wechat-personal:getRuntimeStatus'),
-  downloadPersonalWechatRuntime: (): Promise<PersonalWechatRuntimeDownloadResult> =>
-    ipcRenderer.invoke('wechat-personal:downloadRuntime'),
-  cancelPersonalWechatRuntimeDownload: (): Promise<{ success: boolean }> =>
-    ipcRenderer.invoke('wechat-personal:cancelRuntimeDownload'),
-  removePersonalWechatRuntime: (): Promise<PersonalWechatRuntimeStatus> =>
-    ipcRenderer.invoke('wechat-personal:removeRuntime'),
-  openPersonalWechatRuntimeDirectory: (): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke('wechat-personal:openRuntimeDirectory'),
-  onPersonalWechatRuntimeProgress: (
-    callback: (status: PersonalWechatRuntimeProgressEvent) => void
-  ) => {
-    const listener = (
-      _event: Electron.IpcRendererEvent,
-      status: PersonalWechatRuntimeProgressEvent
-    ): void => callback(status)
-    ipcRenderer.on('wechat-personal:runtimeProgress', listener)
-    return () => ipcRenderer.removeListener('wechat-personal:runtimeProgress', listener)
-  },
-  rebindPersonalWechatSender: (): Promise<PersonalWechatSenderStatus> =>
-    ipcRenderer.invoke('wechat-personal:rebind'),
-  selectPersonalWechatImage: (): Promise<PersonalWechatImageSelectionResult> =>
-    ipcRenderer.invoke('wechat-personal:selectImage'),
-  selectPersonalWechatVoice: (): Promise<PersonalWechatVoiceSelectionResult> =>
-    ipcRenderer.invoke('wechat-personal:selectVoice'),
-  sendPersonalWechatMessage: (
-    request: PersonalWechatSendRequest
-  ): Promise<PersonalWechatSendResult> => ipcRenderer.invoke('wechat-personal:send', request),
   getTopicCenter: (): Promise<TopicCenterState> => ipcRenderer.invoke('topic:center'),
   generateTopicPackage: (request: TopicPackageRequest): Promise<TopicPackageResult> =>
     ipcRenderer.invoke('topic:generatePackage', request),
@@ -405,7 +389,6 @@ const api = {
   ): Promise<TopicCenterState> => ipcRenderer.invoke('topic:saveSubscription', input),
   runTopicSubscription: (id: string): Promise<TopicCenterState> =>
     ipcRenderer.invoke('topic:runSubscription', id),
-  getAgentHubStatus: () => ipcRenderer.invoke('agent-hub:getStatus'),
   getAgentHubLogs: () => ipcRenderer.invoke('agent-hub:getLogs'),
   clearAgentHubLogs: () => ipcRenderer.invoke('agent-hub:clearLogs'),
   getAgentHubPromptSettings: (): Promise<AgentHubPromptSettings> =>
@@ -414,17 +397,6 @@ const api = {
     ipcRenderer.invoke('agent-hub:savePromptSettings', customInstructions),
   askAgentHubLocal: (request: AgentHubLocalAskRequest): Promise<AgentHubLocalAskResult> =>
     ipcRenderer.invoke('agent-hub:askLocal', request),
-  startAgentHubLogin: () => ipcRenderer.invoke('agent-hub:startLogin'),
-  cancelAgentHubLogin: () => ipcRenderer.invoke('agent-hub:cancelLogin'),
-  reconnectAgentHub: () => ipcRenderer.invoke('agent-hub:reconnect'),
-  disconnectAgentHub: () => ipcRenderer.invoke('agent-hub:disconnect'),
-  selectAgentHubTestImage: () => ipcRenderer.invoke('agent-hub:selectTestImage'),
-  onAgentHubStatus: (callback: (status: AgentHubStatus) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, status: AgentHubStatus): void =>
-      callback(status)
-    ipcRenderer.on('agent-hub:status', listener)
-    return () => ipcRenderer.removeListener('agent-hub:status', listener)
-  },
   onAgentHubLog: (callback: (entry: AgentHubLogEntry) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, entry: AgentHubLogEntry): void =>
       callback(entry)

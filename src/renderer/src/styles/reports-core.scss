@@ -893,11 +893,30 @@
 }
 .agent-hub-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 20px;
   max-width: 1080px;
   margin: 0 auto 20px;
+  border: 1px solid #f1e8e8;
+  border-radius: 18px;
+  background: #fffcfa;
+  padding: 22px 24px;
+  box-shadow: 0 12px 34px rgba(100, 75, 80, 0.045);
+}
+.agent-hub-header-aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: 0 0 auto;
+  gap: 8px;
+
+  img {
+    width: 140px;
+    height: 80px;
+    object-fit: contain;
+    pointer-events: none;
+  }
 }
 .agent-hub-eyebrow,
 .agent-hub-card-kicker {
@@ -1218,6 +1237,7 @@
   min-height: 132px;
   resize: vertical;
   line-height: 1.6;
+  font-family: var(--wxex-font);
 }
 .agent-hub-prompt-footer {
   display: flex;
@@ -1270,13 +1290,13 @@
   gap: 8px;
 }
 .agent-hub-log-body {
-  height: 250px;
+  height: 180px;
   overflow: auto;
   padding: 12px 14px;
-  border: 1px solid #26312a;
+  border: 1px solid var(--tm-card-blue-border);
   border-radius: 11px;
-  background: #18201b;
-  color: #dfe9e2;
+  background: var(--tm-card-blue-bg);
+  color: var(--tm-card-blue-text);
 }
 .agent-hub-log-line {
   display: grid;
@@ -1291,16 +1311,16 @@
     monospace;
 }
 .agent-hub-log-line time {
-  color: #84938a;
+  color: var(--wxex-text-secondary);
 }
 .agent-hub-log-line .source {
-  color: #76d49a;
+  color: var(--tm-card-mint-badge);
 }
 .agent-hub-log-line .source.wechat-connector {
   color: #7dbcf1;
 }
 .agent-hub-log-line .source.system {
-  color: #d8bd6b;
+  color: var(--tm-card-blue-accent);
 }
 .agent-hub-log-line code {
   min-width: 0;
@@ -1309,16 +1329,16 @@
   overflow-wrap: anywhere;
 }
 .agent-hub-log-line.warn code {
-  color: #f1cf77;
+  color: var(--tm-topic-yellow-text);
 }
 .agent-hub-log-line.error code {
-  color: #ff9690;
+  color: var(--wxex-danger);
 }
 .agent-hub-log-empty {
   height: 100%;
   display: grid;
   place-items: center;
-  color: #84938a;
+  color: var(--wxex-text-secondary);
   font: 12px/20px var(--wxex-font);
 }
 .agent-hub-log-note {
@@ -1329,6 +1349,26 @@
 @media (max-width: 900px) {
   .agent-hub-workspace {
     padding: 24px;
+  }
+  .agent-hub-header,
+  .agent-hub-log-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .agent-hub-header-aside {
+    align-items: flex-start;
+
+    img {
+      display: none;
+    }
+  }
+  .agent-hub-log-actions {
+    flex-wrap: wrap;
+  }
+  .agent-hub-log-line {
+    grid-template-columns: 64px 72px minmax(0, 1fr);
+    gap: 6px;
+    font-size: 11px;
   }
   .agent-hub-grid {
     grid-template-columns: 1fr;

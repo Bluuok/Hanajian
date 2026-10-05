@@ -5,7 +5,6 @@ import type {
   TopicSubscription,
   TopicBundle
 } from '../../../../../shared/topic-digest'
-import type { AgentHubStatus } from '../../../../../shared/agent-hub'
 import { formatTopicTime, TOPIC_TIMEZONE } from '../../../../../shared/topic-time'
 
 interface TopicSubscriptionDrawerProps {
@@ -32,7 +31,6 @@ export function TopicSubscriptionDrawer({
   onLoadBundle
 }: TopicSubscriptionDrawerProps): React.ReactElement | null {
   const [center, setCenter] = React.useState<TopicCenterState | null>(null)
-  const [hubStatus, setHubStatus] = React.useState<AgentHubStatus | null>(null)
   const [subscriptionTopic, setSubscriptionTopic] = React.useState(topic || 'craft')
   const [deliveryClock, setDeliveryClock] = React.useState('08:00')
   const [centerBusy, setCenterBusy] = React.useState(false)
@@ -44,12 +42,7 @@ export function TopicSubscriptionDrawer({
 
   const refreshCenter = React.useCallback(async () => {
     try {
-      const [topicCenter, status] = await Promise.all([
-        window.api.getTopicCenter(),
-        window.api.getAgentHubStatus()
-      ])
-      setCenter(topicCenter)
-      setHubStatus(status)
+      setCenter(await window.api.getTopicCenter())
     } catch (cause) {
       setCenterError(cause instanceof Error ? cause.message : '无法读取订阅中心')
     }
@@ -99,8 +92,8 @@ export function TopicSubscriptionDrawer({
   if (!open) return null
 
   const saveSubscription = async (): Promise<void> => {
-    const recipient = hubStatus?.wechatUserId
-    if (!recipient || !groupId || !subscriptionTopic.trim()) return
+    const recipient = 'local'
+    if (!groupId || !subscriptionTopic.trim()) return
     setCenterBusy(true)
     setCenterError('')
     try {
@@ -244,7 +237,7 @@ export function TopicSubscriptionDrawer({
             </label>
 
             <label className="topic-sub-field">
-              <span>每日推送时间（北京时间）</span>
+              <span>每日整理时间（北京时间）</span>
               <input
                 type="time"
                 value={deliveryClock}
@@ -253,16 +246,12 @@ export function TopicSubscriptionDrawer({
               />
             </label>
 
-            <div className="topic-subscription-recipient">
-              固定推送收件人：{hubStatus?.wechatUserId || '未连接'}
-            </div>
+            <div className="topic-subscription-recipient">结果保存在本机，可随时查看与导出</div>
 
             <button
               type="button"
               className="topic-sub-primary-btn"
-              disabled={
-                centerBusy || !hubStatus?.wechatUserId || !groupId || !subscriptionTopic.trim()
-              }
+              disabled={centerBusy || !groupId || !subscriptionTopic.trim()}
               onClick={() => void saveSubscription()}
             >
               {centerBusy ? '正在保存…' : '保存此群每日订阅'}
@@ -338,7 +327,7 @@ export function TopicSubscriptionDrawer({
                     ? '已生成'
                     : run.status === 'running'
                       ? '运行中'
-                      : run.status === 'blocked'
+                      : run.status === 'completed' || run.status === 'blocked'
                         ? '阻塞'
                         : '失败'
                   const badgeClass = isSuccess

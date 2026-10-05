@@ -26,7 +26,7 @@ export function buildDatabaseKeyDiagnostics(
 ): string {
   const validation = state.validation
   return [
-    'TraceMemo 数据库密钥诊断',
+    'Hanajian 数据库密钥诊断',
     `已保存: ${state.saved ? '是' : '否'}`,
     `已验证: ${validation?.success ? '是' : '否'}`,
     `密钥长度合法: ${isDatabaseKeyFormatValid(input) ? '是' : '否'}`,

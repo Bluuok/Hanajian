@@ -176,7 +176,9 @@ function ShareBubble({ data }: { data: Extract<ParsedContent, { type: 'share' }>
                 <strong>{article.title || '公众号文章'}</strong>
                 {article.description ? <small>{article.description}</small> : null}
               </span>
-              {article.coverUrl ? <img src={article.coverUrl} alt="" referrerPolicy="no-referrer" /> : null}
+              {article.coverUrl ? (
+                <img src={article.coverUrl} alt="" referrerPolicy="no-referrer" />
+              ) : null}
             </button>
           ))}
         </div>
@@ -304,22 +306,27 @@ function StickerBubble({
 }: {
   data: Extract<ParsedContent, { type: 'sticker' }>
 }): JSX.Element {
-  const { md5, url, thumbUrl } = data
+  const { md5, url, thumbUrl, aeskey, encryptUrl } = data
   const sourceUrl = url || thumbUrl || ''
-  const cacheKey = md5 || sourceUrl
+  const cacheKey = md5 || sourceUrl || encryptUrl || ''
   const [displayUrl, setDisplayUrl] = useState(() =>
     cacheKey ? stickerDataUrlCache.get(cacheKey) || '' : ''
   )
-  const [loading, setLoading] = useState(Boolean(sourceUrl || md5) && !displayUrl)
+  const [loading, setLoading] = useState(Boolean(cacheKey) && !displayUrl)
   const [error, setError] = useState(false)
   const [errorText, setErrorText] = useState('')
 
   useEffect(() => {
-    if (!cacheKey || displayUrl || error) return
+    const cached = cacheKey ? stickerDataUrlCache.get(cacheKey) || '' : ''
+    setDisplayUrl(cached)
+    setLoading(Boolean(cacheKey) && !cached)
+    setError(false)
+    setErrorText('')
+    if (!cacheKey || cached) return
 
     let cancelled = false
     window.api
-      .getSticker(sourceUrl, md5)
+      .getSticker(sourceUrl, md5, aeskey, encryptUrl)
       .then((result) => {
         if (cancelled) return
         if (result.success && result.data) {
@@ -345,7 +352,7 @@ function StickerBubble({
     return () => {
       cancelled = true
     }
-  }, [cacheKey, displayUrl, error, md5, sourceUrl])
+  }, [aeskey, cacheKey, encryptUrl, md5, sourceUrl])
 
   if (displayUrl) {
     return (

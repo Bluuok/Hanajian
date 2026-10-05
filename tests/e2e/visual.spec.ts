@@ -23,7 +23,7 @@ test('NAV-01 login page visual @visual', async () => {
   const fixture = await launchTestApp({ mode: 'disconnected' })
   try {
     await fixture.setWindowContentSize(visualViewport)
-    await expect(fixture.page.getByRole('heading', { name: 'TraceDigest' })).toBeVisible()
+    await expect(fixture.page.getByRole('heading', { name: '花笺 · Hanajian' })).toBeVisible()
     await clearScreenshotFocus(fixture.page)
     await expect(fixture.page).toHaveScreenshot('login-page.png', {
       animations: 'disabled',
@@ -185,7 +185,7 @@ test('API-00 Reader Skill page visual @visual', async () => {
   try {
     await fixture.setWindowContentSize(visualViewport)
     await fixture.page.getByRole('button', { name: 'API' }).click()
-    await expect(fixture.page.getByRole('heading', { name: 'TraceMemo Reader' })).toBeVisible()
+    await expect(fixture.page.getByRole('heading', { name: 'Hanajian Reader' })).toBeVisible()
     await expect(fixture.page.getByText('API Token', { exact: true })).toBeVisible()
     expect(
       await fixture.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
@@ -208,7 +208,7 @@ test('API-00 Reader Skill page legacy dark normalized to light visual @visual', 
   try {
     await fixture.setWindowContentSize(visualViewport)
     await fixture.page.getByRole('button', { name: 'API' }).click()
-    await expect(fixture.page.getByRole('heading', { name: 'TraceMemo Reader' })).toBeVisible()
+    await expect(fixture.page.getByRole('heading', { name: 'Hanajian Reader' })).toBeVisible()
     await expect(fixture.page.getByText('API Token', { exact: true })).toBeVisible()
     await expect(fixture.page.locator('html')).toHaveAttribute('data-theme', 'light')
     expect(
@@ -237,7 +237,7 @@ test('API-01 Reader Skill preview visual @visual', async () => {
       .getByRole('button', { name: '预览 Skill' })
       .click()
     await expect(
-      fixture.page.getByRole('dialog', { name: 'TraceMemo Reader Skill 预览' })
+      fixture.page.getByRole('dialog', { name: 'Hanajian Reader Skill 预览' })
     ).toBeVisible()
     expect(
       await fixture.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
@@ -378,54 +378,6 @@ for (const appearanceTheme of ['light'] as const) {
   })
 }
 
-for (const appearanceTheme of ['light'] as const) {
-  test(`CHAT-02 personal WeChat send dialog ${appearanceTheme} visual @visual`, async () => {
-    test.skip(process.platform !== 'darwin', 'Personal WeChat sending is currently macOS-only')
-    const fixture = await launchTestApp({ now: visualNow, appearanceTheme })
-    const pageErrors: Error[] = []
-    fixture.page.on('pageerror', (error) => pageErrors.push(error))
-    try {
-      await fixture.setWindowContentSize(visualViewport)
-      await fixture.page.getByText('产品测试群', { exact: true }).click()
-      await fixture.page.getByRole('button', { name: '发送消息' }).click()
-      const dialog = fixture.page.getByRole('dialog', { name: '产品测试群' })
-      await expect(dialog).toBeVisible()
-      await expect(fixture.page.locator('html')).toHaveAttribute('data-theme', appearanceTheme)
-      expect(
-        await fixture.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
-      ).toBe(true)
-      expect(pageErrors).toEqual([])
-      await fixture.page.mouse.move(0, 0)
-      await fixture.page.waitForTimeout(700)
-      await clearScreenshotFocus(fixture.page)
-      const screenshotName =
-        appearanceTheme === 'light'
-          ? 'personal-wechat-send-dialog.png'
-          : 'personal-wechat-send-dialog-dark.png'
-      await expect(fixture.page).toHaveScreenshot(screenshotName, {
-        animations: 'disabled',
-        caret: 'hide'
-      })
-
-      const startSending = dialog.getByRole('button', { name: '开始发送' })
-      if (await startSending.isVisible()) await startSending.click()
-      await dialog.getByRole('radio', { name: '语音' }).click()
-      await expect(dialog.getByRole('textbox', { name: '语音文字' })).toBeVisible()
-      await dialog.locator('.personal-wechat-composer').scrollIntoViewIfNeeded()
-      await clearScreenshotFocus(fixture.page)
-      await expect(fixture.page).toHaveScreenshot(
-        `personal-wechat-voice-controls-${appearanceTheme}.png`,
-        {
-          animations: 'disabled',
-          caret: 'hide'
-        }
-      )
-    } finally {
-      await fixture.close()
-    }
-  })
-}
-
 test('CHAT-03 image viewer visual @visual', async () => {
   const fixture = await launchTestApp({ now: visualNow })
   const pageErrors: Error[] = []
@@ -457,7 +409,7 @@ test('SETTINGS-02 basic settings controls visual @visual', async () => {
     await fixture.setWindowContentSize(visualViewport)
     await fixture.page
       .getByRole('navigation', { name: '一级导航' })
-      .getByRole('button', { name: '设置' })
+      .getByRole('button', { name: '设置', exact: true })
       .click()
 
     await expect(fixture.page.getByRole('heading', { name: '账号与数据库' })).toBeVisible()
@@ -547,7 +499,7 @@ test('UPDATE-02 unsigned macOS release prompt visual @visual', async () => {
     await dialog.getByRole('button', { name: '取消' }).click()
     await fixture.page
       .getByRole('navigation', { name: '一级导航' })
-      .getByRole('button', { name: '设置' })
+      .getByRole('button', { name: '设置', exact: true })
       .click()
     await fixture.page.getByRole('button', { name: '关于' }).click()
     await expect(fixture.page.getByRole('button', { name: '前往下载' })).toBeVisible()
@@ -574,7 +526,7 @@ test('SETTINGS-03 database key controls visual @visual', async () => {
     await fixture.setWindowContentSize(visualViewport)
     await fixture.page
       .getByRole('navigation', { name: '一级导航' })
-      .getByRole('button', { name: '设置' })
+      .getByRole('button', { name: '设置', exact: true })
       .click()
     await fixture.page.getByRole('button', { name: '数据库密钥' }).click()
     await expect(fixture.page.getByRole('heading', { name: '数据库密钥' })).toBeVisible()
@@ -608,7 +560,7 @@ for (const appearanceTheme of ['light'] as const) {
       await fixture.setWindowContentSize(visualViewport)
       await fixture.page
         .getByRole('navigation', { name: '一级导航' })
-        .getByRole('button', { name: '设置' })
+        .getByRole('button', { name: '设置', exact: true })
         .click()
       await fixture.page.getByRole('button', { name: '防撤回' }).click()
       await expect(fixture.page.getByRole('switch', { name: '开启防撤回' })).toBeVisible()
@@ -640,7 +592,7 @@ for (const appearanceTheme of ['light'] as const) {
       await fixture.setWindowContentSize(visualViewport)
       await fixture.page
         .getByRole('navigation', { name: '一级导航' })
-        .getByRole('button', { name: '设置' })
+        .getByRole('button', { name: '设置', exact: true })
         .click()
       await fixture.page.getByRole('button', { name: '图片解密' }).click()
       await expect(
@@ -676,7 +628,7 @@ for (const appearanceTheme of ['light'] as const) {
       await fixture.setWindowContentSize(visualViewport)
       await fixture.page
         .getByRole('navigation', { name: '一级导航' })
-        .getByRole('button', { name: '设置' })
+        .getByRole('button', { name: '设置', exact: true })
         .click()
       await fixture.page.getByRole('button', { name: 'AI 模型' }).click()
       await fixture.page.getByRole('button', { name: '添加供应商' }).click()
@@ -714,7 +666,7 @@ for (const appearanceTheme of ['light'] as const) {
       await fixture.setWindowContentSize(visualViewport)
       await fixture.page
         .getByRole('navigation', { name: '一级导航' })
-        .getByRole('button', { name: '设置' })
+        .getByRole('button', { name: '设置', exact: true })
         .click()
       await fixture.page.getByRole('button', { name: '文字转语音' }).click()
       const modelSelect = fixture.page.getByRole('combobox', { name: '合成模型' })
@@ -749,7 +701,7 @@ for (const appearanceTheme of ['light'] as const) {
       await fixture.setWindowContentSize(visualViewport)
       await fixture.page
         .getByRole('navigation', { name: '一级导航' })
-        .getByRole('button', { name: '设置' })
+        .getByRole('button', { name: '设置', exact: true })
         .click()
       await fixture.page.getByRole('button', { name: '语音转文字' }).click()
       const categoryTabs = fixture.page.getByRole('tablist', { name: '会话类别' })

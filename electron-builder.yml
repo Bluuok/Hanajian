@@ -1,3 +1,4 @@
+# Compatibility: retain the installed app identity across upgrades.
 appId: io.github.bluuok.tracedigest
 productName: 花笺
 afterPack: scripts/after-pack.cjs
@@ -5,6 +6,8 @@ directories:
   buildResources: build
 files:
   - out
+  - NOTICE.md
+  - docs/third-party/**
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
@@ -24,14 +27,14 @@ extraResources:
   # regenerates this file during publish, using the same release configuration.
   - from: build/app-update.yml
     to: app-update.yml
-  # Includes the optional WeChat connector binary for the target platform.
   - from: resources
     to: resources
     filter:
       - '**/*'
       - '!connectors/wechat-personal/**'
-  - from: docs/skill/tracememo-reader
-    to: skill/tracememo-reader
+      - '!connectors/wechat/**'
+  - from: docs/skill/hanajian-reader
+    to: skill/hanajian-reader
     filter:
       - '**/*'
 nsis:
@@ -62,7 +65,7 @@ linux:
     - AppImage
     - snap
     - deb
-  maintainer: electronjs.org
+  maintainer: Bluuok
   category: Utility
 appImage:
   artifactName: ${name}-${version}.${ext}
@@ -70,5 +73,5 @@ npmRebuild: false
 publish:
   provider: github
   owner: Bluuok
-  repo: TraceDigest
+  repo: Hanajian
   releaseType: release

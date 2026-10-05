@@ -43,12 +43,12 @@ export function SkillPreviewDialog({
         <DialogHeader className="flex-row items-center justify-between space-y-0 border-b border-border px-6 py-4 pr-14">
           <div className="flex min-w-0 items-baseline gap-2">
             <DialogTitle className="truncate tracking-normal">
-              TraceMemo Reader Skill 预览
+              Hanajian Reader Skill 预览
             </DialogTitle>
             <span className="shrink-0 text-xs text-muted-foreground">{version || 'v1.0'}</span>
           </div>
           <DialogDescription className="sr-only">
-            查看 TraceMemo Reader Skill 的渲染预览或原始文本。
+            查看 Hanajian Reader Skill 的渲染预览或原始文本。
           </DialogDescription>
           <Button variant="outline" size="sm" onClick={() => setRaw((current) => !current)}>
             {raw ? '渲染预览' : '原始文本'}

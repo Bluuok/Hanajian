@@ -19,11 +19,11 @@ export function SkillDetails({
       <dl>
         <div>
           <dt>名称</dt>
-          <dd>TraceMemo Reader</dd>
+          <dd>Hanajian Reader</dd>
         </div>
         <div>
           <dt>标识</dt>
-          <dd>tracememo-reader</dd>
+          <dd>hanajian-reader</dd>
         </div>
         <div>
           <dt>版本</dt>

@@ -3,6 +3,7 @@ import path from 'path'
 
 export const LEGACY_USER_DATA_NAME = 'WechatExplorer'
 export const LEGACY_PACKAGE_USER_DATA_NAME = 'wechatexplorer'
+// KEEP_COMPAT: existing profiles and OS safeStorage identity must remain readable.
 export const CURRENT_USER_DATA_NAME = 'TraceDigest'
 export const TRACE_MEMO_RUNTIME_NAME = 'TraceDigest'
 

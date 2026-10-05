@@ -18,6 +18,7 @@ describe('FirstUseWelcome', () => {
           {open && (
             <FirstUseWelcome
               onDismiss={() => setOpen(false)}
+              onOpenChat={vi.fn()}
               onOpenReport={vi.fn()}
               onOpenAISettings={vi.fn()}
             />
@@ -43,16 +44,22 @@ describe('FirstUseWelcome', () => {
 
   it('keeps the feature callbacks and guide link intact', async () => {
     const user = userEvent.setup()
+    const onDismiss = vi.fn()
+    const onOpenChat = vi.fn()
     const onOpenReport = vi.fn()
     const onOpenAISettings = vi.fn()
     render(
       <FirstUseWelcome
-        onDismiss={vi.fn()}
+        onDismiss={onDismiss}
+        onOpenChat={onOpenChat}
         onOpenReport={onOpenReport}
         onOpenAISettings={onOpenAISettings}
       />
     )
 
+    await user.click(screen.getByRole('button', { name: '查看聊天记录' }))
+    expect(onOpenChat).toHaveBeenCalledOnce()
+    expect(onDismiss).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: /试试 AI 群聊日报/ }))
     expect(onOpenReport).toHaveBeenCalledOnce()
     expect(screen.queryByRole('button', { name: '问问你的微信' })).not.toBeInTheDocument()

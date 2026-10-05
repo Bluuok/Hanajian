@@ -91,7 +91,7 @@ describe('chat menus', () => {
     expect(searchInput).toHaveFocus()
     await user.type(searchInput, '测试')
     expect(onContentFilterChange).toHaveBeenCalledTimes(2)
-    expect(screen.getByRole('button', { name: '发送消息' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '发送消息' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '关闭搜索' }))
     expect(onContentFilterChange).toHaveBeenLastCalledWith('')

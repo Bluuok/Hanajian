@@ -22,7 +22,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - uses: actions/setup-go@v5
@@ -63,7 +63,7 @@ jobs:
           WXE_E2E_CLOSE_DELAY_MS: 0
 
       - name: Platform visual regression
-        # TraceDigest changed the top-level navigation; enable this repository variable after
+        # Hanajian changed the top-level navigation; enable this repository variable after
         # regenerating and reviewing the macOS baselines for the fork.
         if: runner.os == 'macOS' && vars.RUN_VISUAL_TESTS == 'true'
         run: pnpm exec playwright test tests/e2e/visual.spec.ts

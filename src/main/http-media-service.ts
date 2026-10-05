@@ -46,7 +46,7 @@ function decodeDataUrl(value: string): HttpImageResult | null {
 }
 
 export async function readImageMedia(messageId: string): Promise<HttpImageResult> {
-  if (!isReady()) throw new HttpMediaError('NOT_READY', 'TraceMemo 数据库未初始化')
+  if (!isReady()) throw new HttpMediaError('NOT_READY', 'Hanajian 数据库未初始化')
   const reference = getImageMessageReference(messageId)
   if (!reference) throw new HttpMediaError('NOT_FOUND', '未找到图片消息')
   if (!reference.imageMd5 && !reference.imageDatName) {

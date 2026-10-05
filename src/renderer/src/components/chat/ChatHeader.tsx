@@ -6,14 +6,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  IconButton,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger
+  IconButton
 } from '../ui'
 import { ConversationContentSearch } from './ConversationContentSearch'
-import { AiIcon, MoreIcon, RefreshIcon, SearchIcon, SendIcon } from './icons'
-import { supportsPersonalWechatSend } from '../../utils/runtime-environment'
+import { AiIcon, MoreIcon, RefreshIcon, SearchIcon } from './icons'
 
 interface ChatHeaderProps {
   contact: Contact
@@ -25,7 +21,6 @@ interface ChatHeaderProps {
   onContentFilterChange: (value: string) => void
   onRefresh?: () => void
   onRefreshData?: () => void
-  onTestSend: () => void
   onOpenAiSettings: () => void
 }
 
@@ -39,7 +34,6 @@ export function ChatHeader({
   onContentFilterChange,
   onRefresh,
   onRefreshData,
-  onTestSend,
   onOpenAiSettings
 }: ChatHeaderProps): React.ReactElement {
   const [searchOpen, setSearchOpen] = useState(Boolean(contentFilter))
@@ -101,37 +95,6 @@ export function ChatHeader({
             <DropdownMenuItem onSelect={() => onRefreshData?.()}>刷新数据</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        {supportsPersonalWechatSend ? (
-          <Button
-            variant="outline"
-            size="sm"
-            className="chat-header-text-action"
-            aria-label="发送消息"
-            onClick={onTestSend}
-          >
-            <SendIcon />
-            <span>发送消息</span>
-          </Button>
-        ) : (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0} aria-label="仅支持 macOS">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="chat-header-text-action"
-                  aria-label="发送消息"
-                  onClick={onTestSend}
-                  disabled
-                >
-                  <SendIcon />
-                  <span>发送消息</span>
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>仅支持 macOS</TooltipContent>
-          </Tooltip>
-        )}
         <Button
           variant="default"
           size="sm"

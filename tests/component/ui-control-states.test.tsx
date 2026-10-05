@@ -21,7 +21,7 @@ import {
   SegmentedControlItem
 } from '../../src/renderer/src/components/ui/segmented-control'
 
-describe('TraceMemo UI control states', () => {
+describe('Hanajian UI control states', () => {
   it('uses the compact, standard, and form control height contract', () => {
     render(
       <>

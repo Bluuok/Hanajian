@@ -29,7 +29,7 @@ test('approved companion follows across all pages, small windows, collapse and f
     })
     expect(alpha).toEqual([0, 255])
     const originalCanvas = await dock.locator('canvas').elementHandle()
-    for (const label of ['问问 AI', '日报', 'Clawbot', '导出', '设置', '话题整理']) {
+    for (const label of ['问问 AI', '内容收藏', '日报', '助手设置', '导出', '设置', '话题整理']) {
       await page.getByRole('navigation').getByRole('button', { name: label, exact: true }).click()
       await expect(dock).toBeVisible()
       expect(await originalCanvas!.evaluate((canvas) => canvas.isConnected)).toBe(true)

@@ -1,5 +1,5 @@
 // src/main/services/image-insight-service.ts
-// TraceMemo AI 图片理解基础设施
+// Hanajian AI 图片理解基础设施
 //
 // 设计原则:
 // 1. base64 不走 IPC,只在 main 内部流转(renderer 只看到 ImageInsight 结构化结果)

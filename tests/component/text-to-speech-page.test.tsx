@@ -148,7 +148,7 @@ describe('TextToSpeechPage', () => {
 
   it('opens the official Fish Audio API key page through the main process', async () => {
     render(<TextToSpeechPage onNotice={vi.fn()} />)
-    await screen.findByText('微信发送组件')
+    await screen.findByPlaceholderText('已安全保存；输入新 Key 可替换')
     fireEvent.click(screen.getByRole('button', { name: '前往 api.fish.audio 获取 Key' }))
     await waitFor(() => expect(openApiKeys).toHaveBeenCalledTimes(1))
   })
@@ -170,49 +170,65 @@ describe('TextToSpeechPage', () => {
     await waitFor(() => expect(saveSettings).toHaveBeenCalledWith({ clearApiKey: true }))
   })
 
-  it('keeps runtime directory and refresh actions wired to the existing API', async () => {
+  it('previews a public voice sample without generating audio or changing saved settings', async () => {
     const user = userEvent.setup()
-    render(<TextToSpeechPage onNotice={vi.fn()} />)
-
-    await user.click(await screen.findByRole('button', { name: '打开目录' }))
-    expect(openRuntimeDirectory).toHaveBeenCalledOnce()
-    await user.click(screen.getByRole('button', { name: '重新检测' }))
-    expect(getRuntimeStatus).toHaveBeenCalledTimes(2)
+    const previewUrl = 'https://example.com/public-voice-preview.mp3'
+    listVoices.mockResolvedValue({
+      success: true,
+      items: [{ ...response.voices[0], previewUrl }, response.voices[1]],
+      total: 2,
+      pageNumber: 1,
+      pageSize: 24,
+      hasMore: false
+    })
+    const preview = {
+      play: vi.fn().mockResolvedValue(undefined),
+      pause: vi.fn(),
+      addEventListener: vi.fn()
+    }
+    const AudioConstructor = vi.fn(function () {
+      return preview
+    })
+    vi.stubGlobal('Audio', AudioConstructor)
+    try {
+      render(<TextToSpeechPage onNotice={vi.fn()} />)
+      await waitFor(() => expect(screen.getAllByRole('button', { name: '试听' })[0]).toBeEnabled())
+      expect(screen.getAllByRole('button', { name: '试听' })[1]).toBeDisabled()
+      await user.click(screen.getAllByRole('button', { name: '试听' })[0])
+      expect(AudioConstructor).toHaveBeenCalledWith(previewUrl)
+      expect(preview.play).toHaveBeenCalledOnce()
+      await user.click(screen.getByRole('button', { name: '停止' }))
+      expect(preview.pause).toHaveBeenCalledOnce()
+      expect(saveSettings).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
-  it('opens supported versions from both triggers and restores focus after closing', async () => {
-    const user = userEvent.setup()
+  it('does not initialize or expose the removed WeChat sending runtime', async () => {
     render(<TextToSpeechPage onNotice={vi.fn()} />)
 
-    const guideTrigger = await screen.findByRole('button', { name: '查看支持版本' })
-    await user.click(guideTrigger)
-    expect(screen.getByRole('dialog', { name: '支持的微信版本' })).toBeVisible()
-    expect(screen.getByText('请安装下列完整版本之一。')).toBeVisible()
-    expect(screen.getByRole('link', { name: /下载微信历史版本/ })).toHaveAttribute(
-      'href',
-      'https://github.com/zsbai/wechat-versions/releases'
-    )
-    expect(screen.getByText('4.1.6.12')).toBeVisible()
-    expect(screen.getByText('4.1.11.53')).toBeVisible()
-
-    await user.keyboard('{Escape}')
-    expect(screen.queryByRole('dialog', { name: '支持的微信版本' })).not.toBeInTheDocument()
-    expect(guideTrigger).toHaveFocus()
-
-    const runtimeTrigger = screen.getByRole('button', { name: '支持版本' })
-    await user.click(runtimeTrigger)
-    const dialog = screen.getByRole('dialog', { name: '支持的微信版本' })
-    expect(dialog).toBeVisible()
-    await user.click(dialog.previousElementSibling as HTMLElement)
-    expect(screen.queryByRole('dialog', { name: '支持的微信版本' })).not.toBeInTheDocument()
-    expect(runtimeTrigger).toHaveFocus()
+    await screen.findByPlaceholderText('已安全保存；输入新 Key 可替换')
+    expect(screen.queryByText('微信发送组件')).not.toBeInTheDocument()
+    expect(getRuntimeStatus).not.toHaveBeenCalled()
+    expect(onRuntimeProgress).not.toHaveBeenCalled()
   })
 
-  it('keeps the session handoff that opens supported versions automatically', async () => {
+  it('does not expose version dialogs for the removed sender', async () => {
+    render(<TextToSpeechPage onNotice={vi.fn()} />)
+
+    await screen.findByPlaceholderText('已安全保存；输入新 Key 可替换')
+    expect(screen.queryByRole('button', { name: '查看支持版本' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '支持版本' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '支持的微信版本' })).not.toBeInTheDocument()
+  })
+
+  it('does not let a legacy sender session flag reopen removed UI', async () => {
     sessionStorage.setItem('wxe:show-supported-wechat-versions', '1')
     render(<TextToSpeechPage onNotice={vi.fn()} />)
 
-    expect(await screen.findByRole('dialog', { name: '支持的微信版本' })).toBeVisible()
-    expect(sessionStorage.getItem('wxe:show-supported-wechat-versions')).toBeNull()
+    await screen.findByPlaceholderText('已安全保存；输入新 Key 可替换')
+    expect(screen.queryByRole('dialog', { name: '支持的微信版本' })).not.toBeInTheDocument()
+    expect(getRuntimeStatus).not.toHaveBeenCalled()
   })
 })

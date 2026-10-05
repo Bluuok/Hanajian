@@ -1,3 +1,4 @@
+# Compatibility: retain the installed app identity across upgrades.
 appId: io.github.bluuok.tracedigest
 productName: 花笺
 afterPack: scripts/after-pack.cjs
@@ -5,6 +6,8 @@ directories:
   buildResources: build
 files:
   - out
+  - NOTICE.md
+  - docs/third-party/**
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
@@ -33,17 +36,16 @@ extraResources:
       - mobile_daily_report.html
       - mobile_daily_report_v1.html
       - mobile_daily_report_v2.html
-      - connectors/wechat/win32-x64/**
       - key/win32/x64/**
       - runtime/win32/**
       - wcdb/win32/x64/**
-  - from: docs/skill/tracememo-reader
-    to: skill/tracememo-reader
+  - from: docs/skill/hanajian-reader
+    to: skill/hanajian-reader
     filter:
       - '**/*'
 win:
   icon: icon.ico
-  executableName: TraceDigest
+  executableName: Hanajian
   # The first public build is unsigned. Disabling executable resource editing
   # avoids the Windows Developer Mode symlink requirement in winCodeSign.
   signAndEditExecutable: false
@@ -54,7 +56,7 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
-  artifactName: ${productName}-${version}-setup.${ext}
+  artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
@@ -65,5 +67,5 @@ electronLanguages:
 publish:
   provider: github
   owner: Bluuok
-  repo: TraceDigest
+  repo: Hanajian
   releaseType: release

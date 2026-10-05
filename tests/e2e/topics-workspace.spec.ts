@@ -4,6 +4,8 @@ import fs from 'fs'
 import path from 'path'
 
 const copyToDocs = async (src: string, filename: string): Promise<void> => {
+  // Normal verification must not replace maintained documentation assets.
+  if (process.env.HANAJIAN_UPDATE_SCREENSHOTS !== '1') return
   const destDir = path.resolve('docs/verification/homepage-after')
   fs.mkdirSync(destDir, { recursive: true })
   if (fs.existsSync(src)) {
@@ -183,7 +185,7 @@ test('white theme enforced when launched with legacy dark settings', async () =>
     await page.screenshot({ scale: 'css', path: 'test-results/shiyu-home-dark.png' })
     await copyToDocs('test-results/shiyu-home-dark.png', 'shiyu-home-dark.png')
 
-    for (const label of ['日报', 'Clawbot', '导出', '设置', '话题整理']) {
+    for (const label of ['内容收藏', '日报', '助手设置', '导出', '设置', '话题整理']) {
       await page.getByRole('navigation').getByRole('button', { name: label, exact: true }).click()
       await expect(page.locator('main.app-shell-main')).toHaveAttribute('aria-label', label)
       await expect(page.locator('.app-companion-dock')).toBeVisible()
@@ -333,9 +335,20 @@ test('a group change cancels delayed source navigation', async () => {
     await home.getByRole('button', { name: '生成话题包' }).click()
     await expect(home.getByText('上线推迟到周六。').first()).toBeVisible()
     await fixture.app.evaluate(({ ipcMain }) => {
+      const scope = globalThis as typeof globalThis & {
+        __topicCancellationGate?: { started: boolean; completed: boolean; release: () => void }
+      }
+      let releaseResponse: (() => void) | undefined
+      const responseGate = new Promise<void>((resolve) => {
+        releaseResponse = resolve
+      })
+      const state = { started: false, completed: false, release: () => releaseResponse?.() }
+      scope.__topicCancellationGate = state
       ipcMain.removeHandler('topic:locateSource')
       ipcMain.handle('topic:locateSource', async (_event, locator) => {
-        await new Promise((resolve) => setTimeout(resolve, 600))
+        state.started = true
+        await responseGate
+        state.completed = true
         return {
           success: true,
           message: {
@@ -349,8 +362,39 @@ test('a group change cancels delayed source navigation', async () => {
         }
       })
     })
-    await home.getByRole('button', { name: '在聊天中定位 →' }).click()
-    await page.getByRole('button', { name: /折叠群聊样本/ }).click()
+    const locateSource = home.getByRole('button', { name: '在聊天中定位 →' })
+    await locateSource.click()
+    await expect(locateSource).toBeDisabled()
+    await expect
+      .poll(() =>
+        fixture.app.evaluate(() => {
+          const scope = globalThis as typeof globalThis & {
+            __topicCancellationGate?: { started: boolean; completed: boolean }
+          }
+          return Boolean(scope.__topicCancellationGate?.started && !scope.__topicCancellationGate.completed)
+        })
+      )
+      .toBe(true)
+    const nextGroup = page.getByRole('button', { name: /折叠群聊样本/ })
+    await nextGroup.click()
+    await expect(nextGroup).toHaveAttribute('aria-pressed', 'true')
+    await fixture.app.evaluate(() => {
+      const scope = globalThis as typeof globalThis & {
+        __topicCancellationGate?: { release: () => void }
+      }
+      scope.__topicCancellationGate?.release()
+    })
+    await expect
+      .poll(() =>
+        fixture.app.evaluate(() => {
+          const scope = globalThis as typeof globalThis & {
+            __topicCancellationGate?: { completed: boolean }
+          }
+          return scope.__topicCancellationGate?.completed === true
+        })
+      )
+      .toBe(true)
+    // Keep the existing UI-settling interval after the old response is released.
     await page.waitForTimeout(800)
     await expect(home).toBeVisible()
     await expect(page.getByRole('button', { name: /折叠群聊样本/ })).toHaveAttribute(
@@ -359,6 +403,12 @@ test('a group change cancels delayed source navigation', async () => {
     )
     await expect(page.locator('.source-snapshot-banner')).toHaveCount(0)
   } finally {
+    await fixture.app.evaluate(() => {
+      const scope = globalThis as typeof globalThis & {
+        __topicCancellationGate?: { release: () => void }
+      }
+      scope.__topicCancellationGate?.release()
+    }).catch(() => undefined)
     await fixture.close()
   }
 })
@@ -462,12 +512,16 @@ test('switching groups restores the topic result and reading position', async ()
     expect(savedTop).toBeGreaterThan(0)
 
     await groups.nth(1).click()
-    await expect(home.getByRole('checkbox', { name: '选择候选消息 E1', exact: true })).toHaveCount(0)
+    await expect(home.getByRole('checkbox', { name: '选择候选消息 E1', exact: true })).toHaveCount(
+      0
+    )
     await home.getByRole('searchbox', { name: '话题' }).fill('新群话题')
     await groups.nth(0).click()
 
     await expect(home.getByRole('searchbox', { name: '话题' })).toHaveValue('craft')
-    await expect(home.getByRole('checkbox', { name: '选择候选消息 E1', exact: true })).not.toBeChecked()
+    await expect(
+      home.getByRole('checkbox', { name: '选择候选消息 E1', exact: true })
+    ).not.toBeChecked()
     await expect(home.getByRole('complementary', { name: '消息来源摘录' })).toContainText('#2')
     expect(await main.evaluate((element) => element.scrollTop)).toBe(savedTop)
     expect(

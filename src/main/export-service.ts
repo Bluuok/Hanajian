@@ -44,17 +44,24 @@ const exportStamp = (): string => {
   const pad = (value: number): string => String(value).padStart(2, '0')
   return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`
 }
-const defaultExportRoot = (): string => join(app.getPath('documents'), 'TraceDigest', '导出')
-const legacyExportRoot = (): string => join(app.getPath('documents'), 'WechatExplorer', '导出')
-const resolveDefaultExportRoot = async (outputFolder?: string): Promise<string> => {
-  if (!outputFolder) return defaultExportRoot()
-  try {
-    await fs.access(join(legacyExportRoot(), outputFolder))
-    // Continue incremental exports in the legacy folder when it already exists.
-    return legacyExportRoot()
-  } catch {
-    return defaultExportRoot()
+const defaultExportRoot = (): string => join(app.getPath('documents'), 'Hanajian', '导出')
+export const resolveDefaultExportRoot = async (outputFolder?: string): Promise<string> => {
+  const current = defaultExportRoot()
+  if (!outputFolder) return current
+  // Prefer an existing current archive, then reuse legacy archives in place.
+  const candidates = [
+    current,
+    ...['TraceDigest', 'WechatExplorer'].map((name) => join(app.getPath('documents'), name, '导出'))
+  ]
+  for (const root of candidates) {
+    try {
+      const stat = await fs.stat(join(root, outputFolder))
+      if (stat.isDirectory()) return root
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    }
   }
+  return current
 }
 const imageKeys = new ImageKeyConfigService()
 
@@ -928,7 +935,10 @@ async function runSingleExport(
       request.format === 'html'
         ? options.outputFolderName || safeFilePart(request.outputName)
         : `${safeFilePart(request.outputName)}_${exportStamp()}`
-    const root = options.outputRoot || request.outputDirectory || (await resolveDefaultExportRoot(outputFolder))
+    const root =
+      options.outputRoot ||
+      request.outputDirectory ||
+      (await resolveDefaultExportRoot(outputFolder))
     await fs.mkdir(root, { recursive: true })
     const outputDir = join(root, outputFolder)
     const outputPath =

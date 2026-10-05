@@ -1,10 +1,13 @@
 node_modules
+.pnpm-store/
 .electron-cache/
 .electron-builder-cache/
 *.tsbuildinfo
 dist
 out
 .env
+.env.*
+!.env.example
 .go-runtime.json
 .DS_Store
 .eslintcache
@@ -12,6 +15,8 @@ out
 coverage/
 playwright-report/
 test-results/
+.tmp-test-artifacts/
+.agy-staff/
 resources/connectors/wechat/
 resources/connectors/wechat-personal/
 .omc

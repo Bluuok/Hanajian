@@ -1,12 +1,18 @@
+import type { TopicSourceLocator } from '../../../../shared/topic-package'
+import { TopicPanel } from './TopicPanel'
 import React from 'react'
 import type { AgentHubLocalChatMessage } from '../../../../shared/agent-hub'
-import type { TopicSourceLocator } from '../../../../shared/topic-package'
+import type { AgentMemoryDraft } from '../../../../shared/agent-memory'
+import {
+  renderAgentMemoryExport,
+  AGENT_MEMORY_FORMAT_OPTIONS
+} from '../../../../shared/agent-memory-format'
 import type { Contact, Message } from '../../../../shared/types'
 import ChatWindow from '../../components/ChatWindow'
 import { Button, Textarea } from '../../components/ui'
-import { TopicPanel } from './TopicPanel'
 
 interface AskAIWorkspaceProps {
+  accountScope?: string
   contacts: Contact[]
   selectedContact: Contact | null
   messages: Message[]
@@ -33,6 +39,9 @@ interface AskMessage extends AgentHubLocalChatMessage {
   id: string
   timestamp: number
   failed?: boolean
+  memoryDraft?: AgentMemoryDraft
+  memoryWrittenPath?: string
+  memoryWriteError?: string
 }
 
 type HistoryRetention = '1d' | '7d' | '30d' | 'never'
@@ -41,6 +50,7 @@ const HISTORY_STORAGE_KEY = 'tracedigest_ask_ai_histories_v1'
 const HISTORY_RETENTION_KEY = 'tracedigest_ask_ai_retention'
 const LEFT_WIDTH_KEY = 'tracedigest_ask_ai_left_width'
 const RIGHT_WIDTH_KEY = 'tracedigest_ask_ai_right_width'
+const MEMORY_OUTPUT_DIRECTORY_KEY = 'tracedigest_ask_ai_memory_output_directory'
 const DEFAULT_LEFT_WIDTH = 250
 const DEFAULT_RIGHT_WIDTH = 390
 const MIN_LEFT_WIDTH = 180
@@ -63,6 +73,8 @@ const EXAMPLES = [
   '总结这个群今天下午的消息',
   '这个群最近有哪些重要决定和待办？'
 ]
+
+const MEMORY_EXAMPLE = '例如：只保留 AI Agent、产品设计和工程实践相关的可复用讨论，不要泛泛而谈。'
 
 const displayName = (contact: Contact): string =>
   contact.m_nsNickName || contact.remark || contact.m_nsUsrName || '未命名群聊'
@@ -103,9 +115,12 @@ const pruneHistories = (
   )
 }
 
-const loadHistories = (retention: HistoryRetention): Record<string, AskMessage[]> => {
+const loadHistories = (
+  retention: HistoryRetention,
+  storageKey: string
+): Record<string, AskMessage[]> => {
   try {
-    const parsed = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '{}') as {
+    const parsed = JSON.parse(localStorage.getItem(storageKey) || '{}') as {
       groups?: Record<string, AskMessage[]>
     }
     return pruneHistories(parsed.groups || {}, retention)
@@ -114,9 +129,9 @@ const loadHistories = (retention: HistoryRetention): Record<string, AskMessage[]
   }
 }
 
-const saveHistories = (histories: Record<string, AskMessage[]>): void => {
+const saveHistories = (histories: Record<string, AskMessage[]>, storageKey: string): void => {
   try {
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify({ version: 1, groups: histories }))
+    localStorage.setItem(storageKey, JSON.stringify({ version: 1, groups: histories }))
   } catch {
     // A full localStorage should not interrupt the current conversation.
   }
@@ -135,6 +150,7 @@ const previewHistory = (message?: AskMessage): string => {
 }
 
 export function AskAIWorkspace({
+  accountScope,
   contacts,
   selectedContact,
   messages,
@@ -156,12 +172,26 @@ export function AskAIWorkspace({
   onReturnToLatest,
   onOpenSource
 }: AskAIWorkspaceProps): React.ReactElement {
+  const storageKey = accountScope
+    ? `${HISTORY_STORAGE_KEY}:${encodeURIComponent(accountScope)}`
+    : HISTORY_STORAGE_KEY
   const [query, setQuery] = React.useState('')
   const [question, setQuestion] = React.useState('')
+  const [memoryEnabled, setMemoryEnabled] = React.useState(false)
+  const [memoryConfigOpen, setMemoryConfigOpen] = React.useState(true)
+  const [memoryFormat, setMemoryFormat] = React.useState('professional-memory-v1')
+  const [memoryStyle, setMemoryStyle] = React.useState('')
+  const [memoryFocus, setMemoryFocus] = React.useState(
+    '保留可复用的结论、方法、关键依据、待验证问题和资源；排除闲聊与个人联系方式。'
+  )
+  const [memoryOutputDirectory, setMemoryOutputDirectory] = React.useState(
+    () => localStorage.getItem(MEMORY_OUTPUT_DIRECTORY_KEY) || ''
+  )
   const [busyGroupId, setBusyGroupId] = React.useState('')
+  const [writingMemoryId, setWritingMemoryId] = React.useState('')
   const [retention, setRetention] = React.useState<HistoryRetention>(loadRetention)
   const [histories, setHistories] = React.useState<Record<string, AskMessage[]>>(() =>
-    loadHistories(loadRetention())
+    loadHistories(loadRetention(), storageKey)
   )
   const [leftWidth, setLeftWidth] = React.useState(() =>
     loadPanelWidth(LEFT_WIDTH_KEY, DEFAULT_LEFT_WIDTH)
@@ -181,10 +211,10 @@ export function AskAIWorkspace({
     (update: (current: Record<string, AskMessage[]>) => Record<string, AskMessage[]>): void => {
       const next = pruneHistories(update(historiesRef.current), retentionRef.current)
       historiesRef.current = next
-      saveHistories(next)
+      saveHistories(next, storageKey)
       if (mountedRef.current) setHistories(next)
     },
-    []
+    [storageKey]
   )
 
   const groups = React.useMemo(
@@ -214,7 +244,6 @@ export function AskAIWorkspace({
   const chat = histories[selectedGroupId] || []
   const isBusy = Boolean(busyGroupId)
   const isAsking = Boolean(selectedGroupId && busyGroupId === selectedGroupId)
-
   React.useEffect(() => {
     setTopicPanelOpen(false)
   }, [selectedGroupId])
@@ -234,6 +263,14 @@ export function AskAIWorkspace({
   React.useEffect(() => {
     localStorage.setItem(RIGHT_WIDTH_KEY, String(Math.round(rightWidth)))
   }, [rightWidth])
+
+  React.useEffect(() => {
+    if (memoryOutputDirectory) {
+      localStorage.setItem(MEMORY_OUTPUT_DIRECTORY_KEY, memoryOutputDirectory)
+    } else {
+      localStorage.removeItem(MEMORY_OUTPUT_DIRECTORY_KEY)
+    }
+  }, [memoryOutputDirectory])
 
   React.useEffect(() => {
     if (selectedGroup || groups.length === 0) return
@@ -297,6 +334,7 @@ export function AskAIWorkspace({
     const text = question.trim()
     const group = selectedGroup
     if (!text || !group || isBusy) return
+    if (memoryEnabled && !memoryOutputDirectory) return
     const groupId = group.md5
     const previous = historiesRef.current[groupId] || []
     const timestamp = Date.now()
@@ -307,6 +345,7 @@ export function AskAIWorkspace({
       timestamp
     }
     setQuestion('')
+    setMemoryConfigOpen(false)
     setBusyGroupId(groupId)
     commitHistories((current) => ({
       ...current,
@@ -317,14 +356,23 @@ export function AskAIWorkspace({
         question: text,
         groupId,
         groupName: displayName(group),
-        history: previous.map(({ role, content }) => ({ role, content }))
+        history: previous.map(({ role, content }) => ({ role, content })),
+        memoryExtraction: memoryEnabled
+          ? {
+              enabled: true,
+              focus: memoryFocus.trim(),
+              formatId: memoryFormat,
+              writingStyle: memoryStyle.trim()
+            }
+          : undefined
       })
       const assistantMessage: AskMessage = {
         id: `${Date.now()}-assistant`,
         role: 'assistant',
         content: result.success ? result.answer || 'AI 没有返回内容' : result.error || '提问失败',
         timestamp: Date.now(),
-        failed: !result.success
+        failed: !result.success,
+        memoryDraft: result.memoryDraft
       }
       commitHistories((current) => ({
         ...current,
@@ -347,6 +395,49 @@ export function AskAIWorkspace({
     } finally {
       setBusyGroupId('')
     }
+  }
+
+  const selectMemoryOutputDirectory = (): void => {
+    void window.api.selectExportDirectory().then((result) => {
+      if (!result.canceled && result.path) setMemoryOutputDirectory(result.path)
+    })
+  }
+
+  const updateMessage = (messageId: string, update: (message: AskMessage) => AskMessage): void => {
+    if (!selectedGroupId) return
+    commitHistories((current) => ({
+      ...current,
+      [selectedGroupId]: (current[selectedGroupId] || []).map((message) =>
+        message.id === messageId ? update(message) : message
+      )
+    }))
+  }
+
+  const writeMemoryDraft = async (message: AskMessage): Promise<void> => {
+    if (!message.memoryDraft || !memoryOutputDirectory || writingMemoryId) return
+    setWritingMemoryId(message.id)
+    try {
+      const result = await window.api.writeAgentHubMemoryDraft({
+        draft: message.memoryDraft,
+        outputDirectory: memoryOutputDirectory
+      })
+      updateMessage(message.id, (current) => ({
+        ...current,
+        memoryWrittenPath: result.success ? result.path : undefined,
+        memoryWriteError: result.success ? undefined : result.error || '写入失败'
+      }))
+    } catch (error) {
+      updateMessage(message.id, (current) => ({
+        ...current,
+        memoryWriteError: error instanceof Error ? error.message : '写入失败'
+      }))
+    } finally {
+      setWritingMemoryId('')
+    }
+  }
+
+  const discardMemoryDraft = (messageId: string): void => {
+    updateMessage(messageId, (current) => ({ ...current, memoryDraft: undefined }))
   }
 
   return (
@@ -540,13 +631,64 @@ export function AskAIWorkspace({
             </div>
           ) : (
             chat.map((message) => (
-              <article
-                key={message.id}
-                className={`${message.role} ${message.failed ? 'failed' : ''}`}
-              >
-                <span>{message.role === 'user' ? '你' : 'AI'}</span>
-                <p>{message.content}</p>
-              </article>
+              <React.Fragment key={message.id}>
+                <article className={`${message.role} ${message.failed ? 'failed' : ''}`}>
+                  <span>{message.role === 'user' ? '你' : 'AI'}</span>
+                  <p>{message.content}</p>
+                </article>
+                {message.memoryDraft ? (
+                  <section className="ask-ai-memory-draft" aria-label="记忆草稿预览">
+                    <div className="ask-ai-memory-draft-header">
+                      <div>
+                        <span>记忆草稿</span>
+                        <strong>{message.memoryDraft.title}</strong>
+                      </div>
+                      <em>{message.memoryWrittenPath ? '已写入' : '未写入'}</em>
+                    </div>
+                    {message.memoryDraft.success ? (
+                      <>
+                        <p className="ask-ai-memory-stats">
+                          本次读取 {message.memoryDraft.sourceMessageCount} 条，沉淀内容引用{' '}
+                          {message.memoryDraft.selectedMessageCount ??
+                            message.memoryDraft.professionalMessageCount}{' '}
+                          条消息。
+                        </p>
+                        <pre>{renderAgentMemoryExport(message.memoryDraft)}</pre>
+                        {message.memoryDraft.warning ? (
+                          <p className="ask-ai-memory-warning">{message.memoryDraft.warning}</p>
+                        ) : null}
+                        {message.memoryWrittenPath ? (
+                          <p className="ask-ai-memory-written">
+                            已写入：{message.memoryWrittenPath}
+                          </p>
+                        ) : (
+                          <div className="ask-ai-memory-actions">
+                            <Button
+                              disabled={!memoryOutputDirectory || Boolean(writingMemoryId)}
+                              onClick={() => void writeMemoryDraft(message)}
+                            >
+                              {writingMemoryId === message.id ? '正在写入…' : '写入记忆库'}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => discardMemoryDraft(message.id)}
+                            >
+                              不写入
+                            </Button>
+                          </div>
+                        )}
+                        {message.memoryWriteError ? (
+                          <p className="ask-ai-memory-error">{message.memoryWriteError}</p>
+                        ) : null}
+                      </>
+                    ) : (
+                      <p className="ask-ai-memory-error">
+                        {message.memoryDraft.error || '未能生成记忆草稿'}
+                      </p>
+                    )}
+                  </section>
+                ) : null}
+              </React.Fragment>
             ))
           )}
           {isAsking ? (
@@ -558,6 +700,70 @@ export function AskAIWorkspace({
           <div ref={answerEndRef} />
         </div>
         <div className="ask-ai-composer">
+          <label className="ask-ai-memory-toggle">
+            <input
+              type="checkbox"
+              checked={memoryEnabled}
+              disabled={isBusy}
+              onChange={(event) => setMemoryEnabled(event.target.checked)}
+            />
+            <span>
+              <strong>提取专业记忆</strong>
+              <small>仅预览；确认后才写入指定目录</small>
+            </span>
+          </label>
+          {memoryEnabled ? (
+            <details
+              className="ask-ai-memory-config"
+              open={memoryConfigOpen}
+              onToggle={(event) => setMemoryConfigOpen(event.currentTarget.open)}
+            >
+              <summary>记忆提取设置</summary>
+              <label>
+                <span>笔记格式</span>
+                <select
+                  aria-label="笔记格式"
+                  value={memoryFormat}
+                  disabled={isBusy}
+                  onChange={(event) => setMemoryFormat(event.target.value)}
+                >
+                  {AGENT_MEMORY_FORMAT_OPTIONS.map((format) => (
+                    <option key={format.id} value={format.id}>
+                      {format.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>想沉淀什么</span>
+                <Textarea
+                  aria-label="记忆提取提示词"
+                  placeholder={MEMORY_EXAMPLE}
+                  maxLength={1600}
+                  value={memoryFocus}
+                  disabled={isBusy}
+                  onChange={(event) => setMemoryFocus(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>表达风格（可选）</span>
+                <Textarea
+                  aria-label="记忆表达风格"
+                  value={memoryStyle}
+                  maxLength={800}
+                  placeholder="例如：简短条目、解释术语、保留操作步骤"
+                  disabled={isBusy}
+                  onChange={(event) => setMemoryStyle(event.target.value)}
+                />
+              </label>
+              <div className="ask-ai-memory-directory">
+                <span>{memoryOutputDirectory || '尚未选择记忆库目录'}</span>
+                <Button variant="outline" disabled={isBusy} onClick={selectMemoryOutputDirectory}>
+                  选择保存路径
+                </Button>
+              </div>
+            </details>
+          ) : null}
           <Textarea
             aria-label="向 AI 提问"
             value={question}
@@ -576,10 +782,15 @@ export function AskAIWorkspace({
               }
             }}
           />
-          <div>
+          <div className="ask-ai-composer-actions">
             <span>Enter 发送，Shift + Enter 换行</span>
             <Button
-              disabled={!question.trim() || !selectedGroup || isBusy}
+              disabled={
+                !question.trim() ||
+                !selectedGroup ||
+                isBusy ||
+                (memoryEnabled && !memoryOutputDirectory)
+              }
               onClick={() => void ask()}
             >
               {isBusy ? '处理中…' : '发送'}

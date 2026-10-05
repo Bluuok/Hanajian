@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { SkillPreviewDialog } from '../../src/renderer/src/features/api-center/components/SkillPreviewDialog'
 
-const content = `# TraceMemo Reader
+const content = `# Hanajian Reader
 
 ## 能力
 - 读取本地聊天记录
@@ -38,7 +38,7 @@ describe('SkillPreviewDialog', () => {
     render(<Harness />)
 
     await user.click(screen.getByRole('button', { name: '预览 Skill' }))
-    const dialog = screen.getByRole('dialog', { name: 'TraceMemo Reader Skill 预览' })
+    const dialog = screen.getByRole('dialog', { name: 'Hanajian Reader Skill 预览' })
     expect(dialog).toBeVisible()
     expect(screen.getByText('v1.2')).toBeVisible()
     expect(screen.getByRole('heading', { name: '能力' })).toBeVisible()
@@ -60,15 +60,15 @@ describe('SkillPreviewDialog', () => {
     await user.click(opener)
     await user.keyboard('{Escape}')
     expect(
-      screen.queryByRole('dialog', { name: 'TraceMemo Reader Skill 预览' })
+      screen.queryByRole('dialog', { name: 'Hanajian Reader Skill 预览' })
     ).not.toBeInTheDocument()
     await waitFor(() => expect(opener).toHaveFocus())
 
     await user.click(opener)
-    const dialog = screen.getByRole('dialog', { name: 'TraceMemo Reader Skill 预览' })
+    const dialog = screen.getByRole('dialog', { name: 'Hanajian Reader Skill 预览' })
     await user.click(dialog.previousElementSibling as HTMLElement)
     expect(
-      screen.queryByRole('dialog', { name: 'TraceMemo Reader Skill 预览' })
+      screen.queryByRole('dialog', { name: 'Hanajian Reader Skill 预览' })
     ).not.toBeInTheDocument()
     await waitFor(() => expect(opener).toHaveFocus())
     expect(onClose).toHaveBeenCalledTimes(2)

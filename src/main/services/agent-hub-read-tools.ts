@@ -8,7 +8,7 @@ import {
   type GroupSnapshot
 } from './chat-service'
 
-const MAX_MESSAGES_PER_CALL = 200
+const MAX_MESSAGES_PER_CALL = 1000
 const MAX_MEMBER_SCAN_MESSAGES = 5000
 
 export const AGENT_HUB_READ_TOOLS: AIToolDefinition[] = [
